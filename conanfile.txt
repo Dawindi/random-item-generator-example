@@ -1,0 +1,14 @@
+[requires]
+ftxui/5.0.0
+gtest/1.14.0
+nlohmann_json/3.11.3
+
+[generators]
+CMakeDeps
+CMakeToolchain
+
+[options]
+ftxui/*:enable_screen=true
+ftxui/*:enable_component=true
+ftxui/*:enable_dom=true
+ftxui/*:enable_event=true
