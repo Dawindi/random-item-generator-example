@@ -8,14 +8,14 @@ A terminal-based utility application built with C++20, [FTXUI](https://github.co
 
 Before building this project, make sure you have the following installed on your system:
 
-- **C++20 Compliant Compiler** (MSVC 2022/2026, GCC 11+, or Clang 13+)
+- **C++20 Compliant Compiler** (MSVC 2026, GCC 11+, or Clang 13+)
 - **CMake** (v3.20 or higher)
 - **Conan** (v2.x package manager)
 - **Ninja** (Highly recommended, enables auto-complete/LSP diagnostics in your editor via compilation databases)
 
----
+> **Note:** On Windows, MSVC 2026 (Visual Studio 18 or Build Tools 2026) is required. MSVC 2022 is **not** supported.
 
-## Setup & Build Instructions
+---
 
 ## Setup & Build Instructions
 
@@ -27,7 +27,7 @@ We highly recommend using **CMake Presets** as they handle both dependency retri
 
 ### Recommended: CMake Presets (Dynamic & Robust)
 
-This is the most reliable way to configure and build the project. On Windows, using the presets automatically loads the MSVC compiler, the resource compiler (`rc.exe`), and the Windows SDK paths **without requiring you to open a Developer Command Prompt**.
+This is the most reliable way to configure and build the project. On Windows, the presets automatically load the MSVC 2026 compiler, the resource compiler (`rc.exe`), and the Windows SDK paths **without requiring you to open a Developer Command Prompt**.
 
 #### 1. Windows (from any PowerShell / Command Prompt terminal)
 ```bash
@@ -41,7 +41,7 @@ cmake --build --preset build-windows-debug
 cmake --build --preset build-windows-debug --clean-first
 
 # Run the executable
-./build/windows-debug/Debug/poe_tracker.exe
+./build/windows-debug/Debug/dsvh.exe
 ```
 
 #### 2. Linux / macOS (from any terminal)
@@ -53,16 +53,16 @@ cmake --preset linux-debug   # or macos-debug
 cmake --build --preset build-linux-debug   # or build-macos-debug
 
 # Run the executable
-./build/linux-debug/poe_tracker   # or macos-debug
+./build/linux-debug/dsvh   # or macos-debug
 ```
 
 ---
 
 ### Alternative A: Standard CMake & Ninja (Developer Terminal required on Windows)
 
-If you prefer to configure manually or are not using presets, you can run standard CMake commands. 
+If you prefer to configure manually or are not using presets, you can run standard CMake commands.
 
-*Note: On Windows, you **must** execute these commands inside a **Developer Command Prompt for VS 2022** or **Developer PowerShell for VS 2022** so that CMake can find the Windows SDK tools (like `rc.exe` and `mt.exe`) and libraries.*
+*Note: On Windows, you **must** execute these commands inside a **Developer Command Prompt for VS 2026** or **Developer PowerShell for VS 2026** so that CMake can find the Windows SDK tools (like `rc.exe` and `mt.exe`) and libraries.*
 
 ```bash
 # 1. Configure CMake with Ninja
@@ -73,7 +73,7 @@ cmake -G Ninja -B build -S . -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
 
 # 3. Run the executable
-./build/poe_tracker.exe
+./build/dsvh.exe
 ```
 
 ---
@@ -91,12 +91,13 @@ cmake -B build -S .
 cmake --build build --config Debug
 
 # 3. Run the executable
-./build/Debug/poe_tracker.exe
+./build/Debug/dsvh.exe
 ```
 
 ---
 
 ## Manual dependency installation (Fallback/Troubleshooting)
+
 If the automatic `conan install` during CMake configuration fails or if you want to run it manually, you can run:
 
 ```bash
@@ -108,7 +109,8 @@ Then rerun the `cmake` configure command.
 ---
 
 ## Editor & IDE Auto-complete (LSP) Support
-This project contains a `.clangd` configuration file at the root which expects the compile commands database in `build/windows-debug`. 
+
+This project contains a `.clangd` configuration file at the root which expects the compile commands database in `build/windows-debug`.
 
 If you configure using the recommended **CMake Presets** method, CMake writes out `build/windows-debug/compile_commands.json` automatically. Your editor's language server (like `clangd` or Zed's built-in LSP) will parse this and fully resolve external dependency headers like `<ftxui/dom/elements.hpp>`.
 
@@ -119,9 +121,12 @@ If you configure using the recommended **CMake Presets** method, CMake writes ou
 ## Troubleshooting
 
 ### Q: Why does CMake complain about missing `"Findftxui.cmake"`?
-If you deleted the `build` directory or cleared it, CMake has no knowledge of where Conan stored the libraries. 
-Simply re-run the Conan installation command (Step 1) to regenerate the integration files in the build folder:
+
+If you deleted the `build` directory or cleared it, CMake has no knowledge of where Conan stored the libraries.
+Simply re-run the Conan installation command to regenerate the integration files in the build folder:
+
 ```bash
 conan install . -s build_type=Debug -s compiler.cppstd=20 -c tools.cmake.cmaketoolchain:user_presets=False --build=missing -of build
 ```
-Then, rerun step 2 to configure CMake.
+
+Then, rerun the CMake configuration step.
