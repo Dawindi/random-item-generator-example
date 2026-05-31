@@ -1,0 +1,10 @@
+{
+  "uuid": "00000000-0000-0000-0000-000000000000",
+  "name": "Iron Sword",
+  "description": "A sturdy iron sword.",
+  "weight": 3.5,
+  "rarity": "Common",
+  "type": "OneHandedPrimary",
+  "status": "OWNED",
+  "owner": "11111111-1111-1111-1111-111111111111"
+}
