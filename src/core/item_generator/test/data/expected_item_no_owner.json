@@ -1,0 +1,9 @@
+{
+  "uuid": "00000000-0000-0000-0000-000000000000",
+  "name": "Health Potion",
+  "description": "Restores 50 HP.",
+  "weight": 0.5,
+  "rarity": "Uncommon",
+  "type": "Consumable",
+  "status": "NOT_OWNDED"
+}
