@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(poe_tracker VERSION 1.0.0 LANGUAGES CXX)
+project(dsvh VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_NO_SYSTEM_FROM_IMPORTED ON)
@@ -15,6 +15,9 @@ message(STATUS "--------------------------------------------------------")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Enable C++ exception handling on MSVC
+add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/EHsc>")
 
 # 1. Handle Conan
 set(CONAN_TOOLCHAIN_FOUND FALSE)
@@ -114,20 +117,22 @@ find_package(ftxui REQUIRED)
 # Find nlohmann_json
 find_package(nlohmann_json REQUIRED)
 
-# Add main executable
-add_executable(poe_tracker src/main.cpp)
-
-target_link_libraries(poe_tracker
-    PRIVATE
-        ftxui::screen
-        ftxui::dom
-        ftxui::component
-)
-
 # 3. Add Subdirectories
 # We add them in order of dependency: Core -> UI -> App -> Tests
 add_subdirectory(src/core)
 add_subdirectory(src/ui)
+
+# Add main executable
+add_executable(dsvh src/main.cc)
+
+target_link_libraries(dsvh
+    PRIVATE
+        ftxui::screen
+        ftxui::dom
+        ftxui::component
+        nlohmann_json::nlohmann_json
+        item_generator
+)
 
 # 4. Tests (Only if enabled)
 option(BUILD_TESTS "Build unit tests" ON)
