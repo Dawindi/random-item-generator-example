@@ -2,6 +2,8 @@ add_library(item_generator STATIC
     base_item.cc
     base_item.h
     interface_item.h
+    item_builder.cc
+    item_builder.h
     item_rarity.h
     item_status.h
     item_type.h

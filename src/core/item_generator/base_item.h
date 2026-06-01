@@ -14,6 +14,14 @@ class BaseItem : public InterfaceItem
   BaseItem();
   ~BaseItem() override = default;
 
+  // Non-copyable (holds a non-copyable UUID).
+  BaseItem(const BaseItem&) = delete;
+  BaseItem& operator=(const BaseItem&) = delete;
+
+  // Movable.
+  BaseItem(BaseItem&&) noexcept = default;
+  BaseItem& operator=(BaseItem&&) noexcept = default;
+
   json toJson() const override;
 
   const UUID& getUUID() const override;
