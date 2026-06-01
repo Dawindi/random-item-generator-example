@@ -7,6 +7,7 @@ add_library(uuid STATIC
     uuid.h
 )
 target_include_directories(uuid PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+add_library(uuid::uuid ALIAS uuid)
 
 add_subdirectory(item_generator)
 

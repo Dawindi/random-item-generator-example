@@ -4,6 +4,7 @@ project(dsvh VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_NO_SYSTEM_FROM_IMPORTED ON)
 
+# 1. Compiler configuration
 # Print Generator and Compiler details
 message(STATUS "--------------------------------------------------------")
 message(STATUS "CMake Generator : ${CMAKE_GENERATOR}")
@@ -19,7 +20,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Enable C++ exception handling on MSVC
 add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/EHsc>")
 
-# 1. Handle Conan
+# 2. Handle Conan
 set(CONAN_TOOLCHAIN_FOUND FALSE)
 if(EXISTS "${CMAKE_BINARY_DIR}/conan_toolchain.cmake")
     set(CONAN_TOOLCHAIN_PATH "${CMAKE_BINARY_DIR}/conan_toolchain.cmake")
@@ -94,7 +95,7 @@ else()
     )
 endif()
 
-# 2. Options for Sanitizers (controlled by CMakePresets)
+# 3. Sanitizers (controlled by CMakePresets)
 option(ENABLE_SANITIZERS "Enable Address and Undefined Behavior sanitizers" OFF)
 option(ENABLE_COVERAGE "Enable code coverage" OFF)
 
@@ -111,18 +112,25 @@ if(ENABLE_SANITIZERS)
     endif()
 endif()
 
-# Find FTXUI
+# 4. Dependencies
 find_package(ftxui REQUIRED)
-
-# Find nlohmann_json
 find_package(nlohmann_json REQUIRED)
 
-# 3. Add Subdirectories
-# We add them in order of dependency: Core -> UI -> App -> Tests
+# 5. Build configuration
+# (BUILD_TESTS must be defined before subdirectories so test targets
+#  can be conditionally included)
+option(BUILD_TESTS "Build unit tests" ON)
+if(BUILD_TESTS)
+    find_package(GTest REQUIRED)
+    enable_testing()
+endif()
+
+# 6. Add Subdirectories
+# We add them in order of dependency: Core -> UI
 add_subdirectory(src/core)
 add_subdirectory(src/ui)
 
-# Add main executable
+# 7. Main executable
 add_executable(dsvh src/main.cc)
 
 target_link_libraries(dsvh
@@ -131,12 +139,13 @@ target_link_libraries(dsvh
         ftxui::dom
         ftxui::component
         nlohmann_json::nlohmann_json
-        item_generator
+        item_generator::item_generator
 )
 
-# 4. Tests (Only if enabled)
-option(BUILD_TESTS "Build unit tests" ON)
+# 8. Tests (only active when BUILD_TESTS is ON)
+# Actual test targets are defined in subdirectories (e.g.
+# src/core/item_generator/test/). This directory is a placeholder
+# for future top-level integration tests.
 if(BUILD_TESTS)
-    enable_testing()
     add_subdirectory(tests)
 endif()
