@@ -23,6 +23,13 @@ add_custom_command(TARGET base_item_test POST_BUILD
     $<TARGET_FILE_DIR:base_item_test>/data
 )
 
+# -----------------------------------------------------------------------------
+#  ItemBuilder Unit Tests
+# -----------------------------------------------------------------------------
+add_executable(item_builder_test
+    item_builder_test.cc
+)
+
 target_compile_definitions(item_builder_test PRIVATE
     TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data"
 )
@@ -40,5 +47,7 @@ add_custom_command(TARGET item_builder_test POST_BUILD
     ${CMAKE_CURRENT_SOURCE_DIR}/data
     $<TARGET_FILE_DIR:item_builder_test>/data
 )
+
 include(GoogleTest)
 gtest_discover_tests(base_item_test)
+gtest_discover_tests(item_builder_test)

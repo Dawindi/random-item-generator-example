@@ -1,0 +1,8 @@
+{
+  "name": "Iron Sword",
+  "description": "A sturdy iron sword.",
+  "weight": 3.5,
+  "rarity": "Common",
+  "type": "OneHandedPrimary",
+  "status": "OWNED"
+}
