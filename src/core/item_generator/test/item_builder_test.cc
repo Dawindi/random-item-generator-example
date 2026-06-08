@@ -87,8 +87,7 @@ TEST_F(ItemBuilderFromJsonTest, FromJsonObject_IgnoresUUID)
   ASSERT_TRUE(item.has_value());
 
   // UUID is not the one from JSON.
-  EXPECT_NE(item->getUUID().toString(),
-            "00000000-0000-0000-0000-000000000000");
+  EXPECT_NE(item->getUUID().toString(), "00000000-0000-0000-0000-000000000000");
 }
 
 TEST_F(ItemBuilderFromJsonTest, FromJsonObject_IgnoresOwner)

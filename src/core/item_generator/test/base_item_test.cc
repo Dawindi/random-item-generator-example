@@ -96,9 +96,7 @@ TEST_F(BaseItemTest, SetAndGetName)
 // =============================================================================
 TEST_F(BaseItemTest, SetAndGetDescription)
 {
-  auto item = ItemBuilder()
-                .withDescription("The legendary sword.")
-                .build();
+  auto item = ItemBuilder().withDescription("The legendary sword.").build();
   EXPECT_EQ(item.getDescription(), "The legendary sword.");
 
   auto empty = ItemBuilder().withDescription("").build();
@@ -238,8 +236,7 @@ TEST_F(BaseItemTest, IsEquivalent)
 
   // Owner differs but core fields match → true (owner ignored)
   UUID someOwner;
-  auto otherWithOwner =
-    ItemBuilder::duplicateItem(item_, std::move(someOwner));
+  auto otherWithOwner = ItemBuilder::duplicateItem(item_, std::move(someOwner));
   EXPECT_TRUE(item_.isEquivalent(otherWithOwner));
 }
 
@@ -289,8 +286,7 @@ TEST_F(BaseItemTest, ToJson)
   {
     UUID owner;
     const auto ownerStr = owner.toString();
-    auto itemWithOwner =
-      ItemBuilder::duplicateItem(item_, std::move(owner));
+    auto itemWithOwner = ItemBuilder::duplicateItem(item_, std::move(owner));
 
     const auto j = itemWithOwner.toJson();
     EXPECT_TRUE(j.contains("owner"));
