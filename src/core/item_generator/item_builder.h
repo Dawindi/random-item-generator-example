@@ -69,6 +69,12 @@ class ItemBuilder
   /// std::nullopt if the file cannot be read or the JSON is invalid.
   static std::optional<BaseItem> fromJson(const std::string& path);
 
+  /// Creates a duplicate of the given item with a new UUID. All fields
+  /// except the UUID are copied from the original. The owner is set to the
+  /// provided optional (defaults to std::nullopt).
+  static BaseItem duplicateItem(const BaseItem& original,
+                                std::optional<UUID> owner = std::nullopt);
+
   private:
   BaseItem item_;
 };

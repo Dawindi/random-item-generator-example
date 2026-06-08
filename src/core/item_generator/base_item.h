@@ -10,6 +10,8 @@
 
 class BaseItem : public InterfaceItem
 {
+  friend class ItemBuilder;
+
   public:
   BaseItem();
   ~BaseItem() override = default;
@@ -27,31 +29,26 @@ class BaseItem : public InterfaceItem
   const UUID& getUUID() const override;
 
   const std::string& getName() const override;
-  void setName(const std::string& name) override;
-
   const std::string& getDescription() const override;
-  void setDescription(const std::string& description) override;
-
   const float& getWeight() const override;
-  void setWeight(float weight) override;
-
   const item::Rarity& getRarity() const override;
-  void setRarity(item::Rarity rarity) override;
-
   const item::Type& getType() const override;
-  void setType(item::Type type) override;
-
   const item::Status& getStatus() const override;
-  void setStatus(item::Status status) override;
-
   const std::optional<UUID>& getOwner() const override;
-  void setOwner(std::optional<UUID> owner) override;
 
   bool isValid() const override;
   bool isEquivalent(const InterfaceItem& other) const override;
   bool isEqual(const InterfaceItem& other) const override;
 
   protected:
+  void setName(const std::string& name) final override;
+  void setDescription(const std::string& description) final override;
+  void setWeight(float weight) final override;
+  void setRarity(item::Rarity rarity) final override;
+  void setType(item::Type type) final override;
+  void setStatus(item::Status status) final override;
+  void setOwner(std::optional<UUID> owner) final override;
+
   UUID uuid_;
   std::string name_;
   std::string description_;

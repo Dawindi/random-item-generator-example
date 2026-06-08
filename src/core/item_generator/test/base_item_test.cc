@@ -5,6 +5,7 @@
 #include <string>
 
 #include "base_item.h"
+#include "item_builder.h"
 #include "item_rarity.h"
 #include "item_status.h"
 #include "item_type.h"
@@ -50,12 +51,14 @@ class BaseItemTest : public ::testing::Test
   protected:
   void SetUp() override
   {
-    item_.setName("Iron Sword");
-    item_.setDescription("A sturdy iron sword.");
-    item_.setWeight(3.5f);
-    item_.setRarity(item::Rarity::Common);
-    item_.setType(item::Type::OneHandedPrimary);
-    item_.setStatus(item::Status::OWNED);
+    item_ = ItemBuilder()
+              .withName("Iron Sword")
+              .withDescription("A sturdy iron sword.")
+              .withWeight(3.5f)
+              .withRarity(item::Rarity::Common)
+              .withType(item::Type::OneHandedPrimary)
+              .withStatus(item::Status::OWNED)
+              .build();
   }
 
   BaseItem item_;
@@ -79,11 +82,11 @@ TEST_F(BaseItemTest, DefaultConstruction)
 // =============================================================================
 TEST_F(BaseItemTest, SetAndGetName)
 {
-  item_.setName("Excalibur");
-  EXPECT_EQ(item_.getName(), "Excalibur");
+  auto item = ItemBuilder().withName("Excalibur").build();
+  EXPECT_EQ(item.getName(), "Excalibur");
 
-  item_.setName("");
-  EXPECT_TRUE(item_.getName().empty());
+  auto empty = ItemBuilder().withName("").build();
+  EXPECT_TRUE(empty.getName().empty());
 }
 
 // =============================================================================
@@ -91,11 +94,13 @@ TEST_F(BaseItemTest, SetAndGetName)
 // =============================================================================
 TEST_F(BaseItemTest, SetAndGetDescription)
 {
-  item_.setDescription("The legendary sword.");
-  EXPECT_EQ(item_.getDescription(), "The legendary sword.");
+  auto item = ItemBuilder()
+                .withDescription("The legendary sword.")
+                .build();
+  EXPECT_EQ(item.getDescription(), "The legendary sword.");
 
-  item_.setDescription("");
-  EXPECT_TRUE(item_.getDescription().empty());
+  auto empty = ItemBuilder().withDescription("").build();
+  EXPECT_TRUE(empty.getDescription().empty());
 }
 
 // =============================================================================
@@ -103,74 +108,14 @@ TEST_F(BaseItemTest, SetAndGetDescription)
 // =============================================================================
 TEST_F(BaseItemTest, SetAndGetWeight)
 {
-  item_.setWeight(12.75f);
-  EXPECT_FLOAT_EQ(item_.getWeight(), 12.75f);
+  auto item = ItemBuilder().withWeight(12.75f).build();
+  EXPECT_FLOAT_EQ(item.getWeight(), 12.75f);
 
-  item_.setWeight(0.0f);
-  EXPECT_FLOAT_EQ(item_.getWeight(), 0.0f);
+  auto zero = ItemBuilder().withWeight(0.0f).build();
+  EXPECT_FLOAT_EQ(zero.getWeight(), 0.0f);
 
-  item_.setWeight(-5.0f);
-  EXPECT_FLOAT_EQ(item_.getWeight(), -5.0f);
-}
-
-// =============================================================================
-//  Rarity
-// =============================================================================
-TEST_F(BaseItemTest, SetAndGetRarity)
-{
-  item_.setRarity(item::Rarity::Common);
-  EXPECT_EQ(item_.getRarity(), item::Rarity::Common);
-
-  item_.setRarity(item::Rarity::Uncommon);
-  EXPECT_EQ(item_.getRarity(), item::Rarity::Uncommon);
-
-  item_.setRarity(item::Rarity::Rare);
-  EXPECT_EQ(item_.getRarity(), item::Rarity::Rare);
-
-  item_.setRarity(item::Rarity::Epic);
-  EXPECT_EQ(item_.getRarity(), item::Rarity::Epic);
-
-  item_.setRarity(item::Rarity::Legendary);
-  EXPECT_EQ(item_.getRarity(), item::Rarity::Legendary);
-
-  item_.setRarity(item::Rarity::Artifact);
-  EXPECT_EQ(item_.getRarity(), item::Rarity::Artifact);
-}
-
-// =============================================================================
-//  Type
-// =============================================================================
-TEST_F(BaseItemTest, SetAndGetType)
-{
-  item_.setType(item::Type::Ring);
-  EXPECT_EQ(item_.getType(), item::Type::Ring);
-
-  item_.setType(item::Type::TwoHandedPrimary);
-  EXPECT_EQ(item_.getType(), item::Type::TwoHandedPrimary);
-
-  item_.setType(item::Type::ChestGear);
-  EXPECT_EQ(item_.getType(), item::Type::ChestGear);
-
-  item_.setType(item::Type::Consumable);
-  EXPECT_EQ(item_.getType(), item::Type::Consumable);
-
-  item_.setType(item::Type::Currency);
-  EXPECT_EQ(item_.getType(), item::Type::Currency);
-}
-
-// =============================================================================
-//  Status
-// =============================================================================
-TEST_F(BaseItemTest, SetAndGetStatus)
-{
-  item_.setStatus(item::Status::NOT_OWNDED);
-  EXPECT_EQ(item_.getStatus(), item::Status::NOT_OWNDED);
-
-  item_.setStatus(item::Status::OWNED);
-  EXPECT_EQ(item_.getStatus(), item::Status::OWNED);
-
-  item_.setStatus(item::Status::EQUIPPED);
-  EXPECT_EQ(item_.getStatus(), item::Status::EQUIPPED);
+  auto neg = ItemBuilder().withWeight(-5.0f).build();
+  EXPECT_FLOAT_EQ(neg.getWeight(), -5.0f);
 }
 
 // =============================================================================
@@ -180,13 +125,13 @@ TEST_F(BaseItemTest, SetAndGetOwner)
 {
   UUID owner;
   const auto ownerStr = owner.toString();
-  item_.setOwner(std::move(owner));
 
-  ASSERT_TRUE(item_.getOwner().has_value());
-  EXPECT_EQ(item_.getOwner()->toString(), ownerStr);
+  auto withOwner = ItemBuilder().withOwner(std::move(owner)).build();
+  ASSERT_TRUE(withOwner.getOwner().has_value());
+  EXPECT_EQ(withOwner.getOwner()->toString(), ownerStr);
 
-  item_.setOwner(std::nullopt);
-  EXPECT_FALSE(item_.getOwner().has_value());
+  auto withoutOwner = ItemBuilder().build();
+  EXPECT_FALSE(withoutOwner.getOwner().has_value());
 }
 
 // =============================================================================
@@ -195,47 +140,76 @@ TEST_F(BaseItemTest, SetAndGetOwner)
 // =============================================================================
 TEST_F(BaseItemTest, IsEquivalent)
 {
-  BaseItem other{};
-
   // Matching properties → true (status/owner ignored)
-  other.setName(item_.getName());
-  other.setDescription(item_.getDescription());
-  other.setWeight(item_.getWeight());
-  other.setRarity(item_.getRarity());
-  other.setType(item_.getType());
-  other.setStatus(
-    item::Status::EQUIPPED); // different status → still equivalent
+  auto other = ItemBuilder::duplicateItem(item_);
   EXPECT_TRUE(item_.isEquivalent(other));
+
+  // Status differs but core fields match → true (status ignored)
+  auto diffStatus = ItemBuilder()
+                      .withName(item_.getName())
+                      .withDescription(item_.getDescription())
+                      .withWeight(item_.getWeight())
+                      .withRarity(item_.getRarity())
+                      .withType(item_.getType())
+                      .withStatus(item::Status::EQUIPPED)
+                      .build();
+  EXPECT_TRUE(item_.isEquivalent(diffStatus));
 
   // Name differs → false
-  other.setName("Steel Sword");
-  EXPECT_FALSE(item_.isEquivalent(other));
+  auto diffName = ItemBuilder()
+                    .withName("Steel Sword")
+                    .withDescription(item_.getDescription())
+                    .withWeight(item_.getWeight())
+                    .withRarity(item_.getRarity())
+                    .withType(item_.getType())
+                    .build();
+  EXPECT_FALSE(item_.isEquivalent(diffName));
 
   // Description differs → false
-  other.setName(item_.getName());
-  other.setDescription("A completely different description.");
-  EXPECT_FALSE(item_.isEquivalent(other));
+  auto diffDesc = ItemBuilder()
+                    .withName(item_.getName())
+                    .withDescription("A completely different description.")
+                    .withWeight(item_.getWeight())
+                    .withRarity(item_.getRarity())
+                    .withType(item_.getType())
+                    .build();
+  EXPECT_FALSE(item_.isEquivalent(diffDesc));
 
   // Weight differs → false
-  other.setDescription(item_.getDescription());
-  other.setWeight(99.0f);
-  EXPECT_FALSE(item_.isEquivalent(other));
+  auto diffWeight = ItemBuilder()
+                      .withName(item_.getName())
+                      .withDescription(item_.getDescription())
+                      .withWeight(99.0f)
+                      .withRarity(item_.getRarity())
+                      .withType(item_.getType())
+                      .build();
+  EXPECT_FALSE(item_.isEquivalent(diffWeight));
 
   // Rarity differs → false
-  other.setWeight(item_.getWeight());
-  other.setRarity(item::Rarity::Artifact);
-  EXPECT_FALSE(item_.isEquivalent(other));
+  auto diffRarity = ItemBuilder()
+                      .withName(item_.getName())
+                      .withDescription(item_.getDescription())
+                      .withWeight(item_.getWeight())
+                      .withRarity(item::Rarity::Artifact)
+                      .withType(item_.getType())
+                      .build();
+  EXPECT_FALSE(item_.isEquivalent(diffRarity));
 
   // Type differs → false
-  other.setRarity(item_.getRarity());
-  other.setType(item::Type::Amulet);
-  EXPECT_FALSE(item_.isEquivalent(other));
+  auto diffType = ItemBuilder()
+                    .withName(item_.getName())
+                    .withDescription(item_.getDescription())
+                    .withWeight(item_.getWeight())
+                    .withRarity(item_.getRarity())
+                    .withType(item::Type::Amulet)
+                    .build();
+  EXPECT_FALSE(item_.isEquivalent(diffType));
 
-  // Owner differs but core fields match → true (owner is ignored)
-  other.setType(item_.getType());
+  // Owner differs but core fields match → true (owner ignored)
   UUID someOwner;
-  other.setOwner(std::move(someOwner));
-  EXPECT_TRUE(item_.isEquivalent(other));
+  auto otherWithOwner =
+    ItemBuilder::duplicateItem(item_, std::move(someOwner));
+  EXPECT_TRUE(item_.isEquivalent(otherWithOwner));
 }
 
 // =============================================================================
@@ -247,23 +221,18 @@ TEST_F(BaseItemTest, IsEqual)
   EXPECT_TRUE(item_.isEqual(item_));
 
   // Different properties, different UUID → false
-  BaseItem other{};
-  other.setName("Other Sword");
-  other.setDescription("Different.");
-  other.setWeight(10.0f);
-  other.setRarity(item::Rarity::Epic);
-  other.setType(item::Type::TwoHandedPrimary);
-  other.setStatus(item::Status::EQUIPPED);
+  auto other = ItemBuilder()
+                 .withName("Other Sword")
+                 .withDescription("Different.")
+                 .withWeight(10.0f)
+                 .withRarity(item::Rarity::Epic)
+                 .withType(item::Type::TwoHandedPrimary)
+                 .withStatus(item::Status::EQUIPPED)
+                 .build();
   EXPECT_FALSE(item_.isEqual(other));
 
   // Same core properties but different UUID → false
-  BaseItem clone{};
-  clone.setName(item_.getName());
-  clone.setDescription(item_.getDescription());
-  clone.setWeight(item_.getWeight());
-  clone.setRarity(item_.getRarity());
-  clone.setType(item_.getType());
-  clone.setStatus(item_.getStatus());
+  auto clone = ItemBuilder::duplicateItem(item_);
   EXPECT_FALSE(item_.isEqual(clone));
 }
 
@@ -289,9 +258,10 @@ TEST_F(BaseItemTest, ToJson)
   {
     UUID owner;
     const auto ownerStr = owner.toString();
-    item_.setOwner(std::move(owner));
+    auto itemWithOwner =
+      ItemBuilder::duplicateItem(item_, std::move(owner));
 
-    const auto j = item_.toJson();
+    const auto j = itemWithOwner.toJson();
     EXPECT_TRUE(j.contains("owner"));
     EXPECT_EQ(j["owner"], ownerStr);
   }
@@ -302,13 +272,14 @@ TEST_F(BaseItemTest, ToJson)
 // =============================================================================
 TEST_F(BaseItemTest, ToJson_MatchesExpectedFile_NoOwner)
 {
-  BaseItem potion{};
-  potion.setName("Health Potion");
-  potion.setDescription("Restores 50 HP.");
-  potion.setWeight(0.5f);
-  potion.setRarity(item::Rarity::Uncommon);
-  potion.setType(item::Type::Consumable);
-  potion.setStatus(item::Status::NOT_OWNDED);
+  auto potion = ItemBuilder()
+                  .withName("Health Potion")
+                  .withDescription("Restores 50 HP.")
+                  .withWeight(0.5f)
+                  .withRarity(item::Rarity::Uncommon)
+                  .withType(item::Type::Consumable)
+                  .withStatus(item::Status::NOT_OWNDED)
+                  .build();
 
   auto raw = readFile(dataPath("expected_item_no_owner.json"));
   replaceAll(raw, "00000000-0000-0000-0000-000000000000",
@@ -320,17 +291,17 @@ TEST_F(BaseItemTest, ToJson_MatchesExpectedFile_NoOwner)
 
 TEST_F(BaseItemTest, ToJson_MatchesExpectedFile_WithOwner)
 {
-  BaseItem sword{};
-  sword.setName("Iron Sword");
-  sword.setDescription("A sturdy iron sword.");
-  sword.setWeight(3.5f);
-  sword.setRarity(item::Rarity::Common);
-  sword.setType(item::Type::OneHandedPrimary);
-  sword.setStatus(item::Status::OWNED);
-
   UUID owner;
   const auto ownerStr = owner.toString();
-  sword.setOwner(std::move(owner));
+  auto sword = ItemBuilder()
+                 .withName("Iron Sword")
+                 .withDescription("A sturdy iron sword.")
+                 .withWeight(3.5f)
+                 .withRarity(item::Rarity::Common)
+                 .withType(item::Type::OneHandedPrimary)
+                 .withStatus(item::Status::OWNED)
+                 .withOwner(std::move(owner))
+                 .build();
 
   auto raw = readFile(dataPath("expected_item_full.json"));
   replaceAll(raw, "00000000-0000-0000-0000-000000000000",

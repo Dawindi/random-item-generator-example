@@ -175,3 +175,17 @@ std::optional<BaseItem> ItemBuilder::fromJson(const std::string& path)
     return std::nullopt;
   }
 }
+
+BaseItem ItemBuilder::duplicateItem(const BaseItem& original,
+                                    std::optional<UUID> owner)
+{
+  BaseItem item;
+  item.setName(original.getName());
+  item.setDescription(original.getDescription());
+  item.setWeight(original.getWeight());
+  item.setRarity(original.getRarity());
+  item.setType(original.getType());
+  item.setStatus(original.getStatus());
+  item.setOwner(std::move(owner));
+  return item;
+}
