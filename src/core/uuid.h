@@ -22,6 +22,10 @@ class UUID
   /// "550e8400-e29b-41d4-a716-446655440000").
   std::string toString() const;
 
+  /// Returns true if the UUID is non-empty and has the expected length
+  /// (36 characters).
+  bool isValid() const;
+
   /// Compares two UUIDs for equality.
   bool operator==(const UUID& other) const;
   bool operator!=(const UUID& other) const;

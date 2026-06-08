@@ -71,7 +71,9 @@ TEST_F(BaseItemTest, DefaultConstruction)
 {
   BaseItem fresh{};
   EXPECT_FALSE(fresh.getUUID().toString().empty());
-  EXPECT_TRUE(fresh.isValid());
+  // A default-constructed item is invalid — weight, rarity, and type
+  // are uninitialised and therefore fail the isValid() checks.
+  EXPECT_FALSE(fresh.isValid());
   EXPECT_TRUE(fresh.getName().empty());
   EXPECT_TRUE(fresh.getDescription().empty());
   EXPECT_FALSE(fresh.getOwner().has_value());
@@ -132,6 +134,35 @@ TEST_F(BaseItemTest, SetAndGetOwner)
 
   auto withoutOwner = ItemBuilder().build();
   EXPECT_FALSE(withoutOwner.getOwner().has_value());
+}
+
+// =============================================================================
+//  isValid
+// =============================================================================
+TEST_F(BaseItemTest, IsValid_FullyBuiltItem)
+{
+  // A fully-populated item passes all validity checks.
+  EXPECT_TRUE(item_.isValid());
+}
+
+TEST_F(BaseItemTest, IsValid_ZeroWeight)
+{
+  auto item = ItemBuilder()
+                .withWeight(0.0f)
+                .withRarity(item::Rarity::Common)
+                .withType(item::Type::OneHandedPrimary)
+                .build();
+  EXPECT_TRUE(item.isValid());
+}
+
+TEST_F(BaseItemTest, IsValid_NegativeWeight)
+{
+  auto item = ItemBuilder()
+                .withWeight(-1.0f)
+                .withRarity(item::Rarity::Common)
+                .withType(item::Type::OneHandedPrimary)
+                .build();
+  EXPECT_FALSE(item.isValid());
 }
 
 // =============================================================================

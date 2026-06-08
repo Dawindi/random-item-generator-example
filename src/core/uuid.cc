@@ -45,6 +45,11 @@ UUID::UUID()
 
 std::string UUID::toString() const { return m_uuid; }
 
+bool UUID::isValid() const
+{
+  return !m_uuid.empty() && m_uuid.size() == 36;
+}
+
 bool UUID::operator==(const UUID& other) const
 {
   return m_uuid == other.m_uuid;

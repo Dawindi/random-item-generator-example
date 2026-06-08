@@ -79,7 +79,8 @@ class InterfaceItem
   virtual void setOwner(std::optional<UUID>) = 0;
 
   // - Checks -
-  // isValid returns whether the item is valid (i.e. has a non-empty UUID).
+  // isValid returns whether the item is valid (UUID is well-formed,
+  // weight is non-negative, and rarity/type are known values).
   virtual bool isValid() const = 0;
 
   // isEquivalent returns whether the item is equivalent to another item without

@@ -1,6 +1,8 @@
 #include "base_item.h"
 #include "item_type.h"
 
+#include <string_view>
+
 BaseItem::BaseItem() : uuid_() {}
 
 json BaseItem::toJson() const
@@ -47,7 +49,14 @@ void BaseItem::setOwner(std::optional<UUID> owner)
   owner_ = std::move(owner);
 }
 
-bool BaseItem::isValid() const { return !uuid_.toString().empty(); }
+bool BaseItem::isValid() const
+{
+  using std::string_view;
+
+  return uuid_.isValid() && weight_ >= 0.0f &&
+         !string_view(item::rarityToString(rarity_)).empty() &&
+         !string_view(item::typeToString(type_)).empty();
+}
 
 bool BaseItem::isEquivalent(const InterfaceItem& other) const
 {
