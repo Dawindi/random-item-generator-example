@@ -61,7 +61,7 @@ class BaseItemTest : public ::testing::Test
               .build();
   }
 
-  BaseItem item_;
+  BaseItem item_{ItemBuilder().build()};
 };
 
 // =============================================================================
@@ -69,7 +69,7 @@ class BaseItemTest : public ::testing::Test
 // =============================================================================
 TEST_F(BaseItemTest, DefaultConstruction)
 {
-  BaseItem fresh{};
+  BaseItem fresh{ItemBuilder().build()};
   EXPECT_FALSE(fresh.getUUID().toString().empty());
   // A default-constructed item is invalid — weight, rarity, and type
   // are uninitialised and therefore fail the isValid() checks.

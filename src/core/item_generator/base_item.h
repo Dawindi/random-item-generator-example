@@ -13,7 +13,6 @@ class BaseItem : public InterfaceItem
   friend class ItemBuilder;
 
   public:
-  BaseItem();
   ~BaseItem() override = default;
 
   // Non-copyable (holds a non-copyable UUID).
@@ -41,6 +40,8 @@ class BaseItem : public InterfaceItem
   bool isEqual(const InterfaceItem& other) const override;
 
   protected:
+  BaseItem();
+
   void setName(const std::string& name) final override;
   void setDescription(const std::string& description) final override;
   void setWeight(float weight) final override;
