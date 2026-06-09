@@ -5,69 +5,6 @@
 #include <optional>
 #include <sstream>
 
-namespace
-{
-
-// Helper function for parsing item rarity from a string
-std::optional<item::Rarity> parseRarity(const std::string& s)
-{
-  if (s == "Common")
-    return item::Rarity::Common;
-  if (s == "Uncommon")
-    return item::Rarity::Uncommon;
-  if (s == "Rare")
-    return item::Rarity::Rare;
-  if (s == "Epic")
-    return item::Rarity::Epic;
-  if (s == "Legendary")
-    return item::Rarity::Legendary;
-  if (s == "Artifact")
-    return item::Rarity::Artifact;
-  return std::nullopt;
-}
-
-// Helper function for parsing item type from a string
-std::optional<item::Type> parseType(const std::string& s)
-{
-  if (s == "OneHandedPrimary")
-    return item::Type::OneHandedPrimary;
-  if (s == "OneHandedSecondary")
-    return item::Type::OneHandedSecondary;
-  if (s == "TwoHandedPrimary")
-    return item::Type::TwoHandedPrimary;
-  if (s == "HeadGear")
-    return item::Type::HeadGear;
-  if (s == "ChestGear")
-    return item::Type::ChestGear;
-  if (s == "ArmGear")
-    return item::Type::ArmGear;
-  if (s == "LegGear")
-    return item::Type::LegGear;
-  if (s == "Amulet")
-    return item::Type::Amulet;
-  if (s == "Ring")
-    return item::Type::Ring;
-  if (s == "Consumable")
-    return item::Type::Consumable;
-  if (s == "Currency")
-    return item::Type::Currency;
-  return std::nullopt;
-}
-
-// Helper function for parsing item status from a string
-std::optional<item::Status> parseStatus(const std::string& s)
-{
-  if (s == "NOT_OWNDED")
-    return item::Status::NOT_OWNDED;
-  if (s == "OWNED")
-    return item::Status::OWNED;
-  if (s == "EQUIPPED")
-    return item::Status::EQUIPPED;
-  return std::nullopt;
-}
-
-} // namespace
-
 ItemBuilder::ItemBuilder() : item_() {}
 
 ItemBuilder& ItemBuilder::withName(const std::string& name)
@@ -136,15 +73,15 @@ std::optional<BaseItem> ItemBuilder::fromJson(const nlohmann::json& j)
   if (!j.contains("status") || !j["status"].is_string())
     return std::nullopt;
 
-  auto rarity = parseRarity(j["rarity"]);
+  auto rarity = item::rarityFromString(j["rarity"]);
   if (!rarity.has_value())
     return std::nullopt;
 
-  auto type = parseType(j["type"]);
+  auto type = item::typeFromString(j["type"]);
   if (!type.has_value())
     return std::nullopt;
 
-  auto status = parseStatus(j["status"]);
+  auto status = item::statusFromString(j["status"]);
   if (!status.has_value())
     return std::nullopt;
 
