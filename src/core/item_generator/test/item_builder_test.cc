@@ -6,9 +6,9 @@
 
 #include "base_item.h"
 #include "item_builder.h"
-#include "item_rarity.h"
-#include "item_status.h"
-#include "item_type.h"
+#include "item_data_types/item_rarity.h"
+#include "item_data_types/item_status.h"
+#include "item_data_types/item_type.h"
 
 using json = nlohmann::json;
 

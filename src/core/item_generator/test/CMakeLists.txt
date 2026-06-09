@@ -12,6 +12,7 @@ target_compile_definitions(base_item_test PRIVATE
 target_link_libraries(base_item_test
     PRIVATE
         item_generator::item_generator
+        item_data_types::item_data_types
         GTest::gtest
         GTest::gtest_main
 )
@@ -37,6 +38,7 @@ target_compile_definitions(item_builder_test PRIVATE
 target_link_libraries(item_builder_test
     PRIVATE
         item_generator::item_generator
+        item_data_types::item_data_types
         GTest::gtest
         GTest::gtest_main
 )
