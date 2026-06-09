@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+#include <cstdint>
 #include <string>
 
 class UUID
@@ -14,22 +16,18 @@ class UUID
   UUID(const UUID&) = delete;
   UUID& operator=(const UUID&) = delete;
 
-  // Movable
-  UUID(UUID&&) noexcept = default;
-  UUID& operator=(UUID&&) noexcept = default;
+  // Movable — moved-from UUID is zeroed.
+  UUID(UUID&& other) noexcept;
+  UUID& operator=(UUID&& other) noexcept;
+
+  /// Compares two UUIDs for equality (all 16 bytes equal).
+  bool operator==(const UUID& other) const;
+  bool operator!=(const UUID& other) const;
 
   /// Returns the UUID as a string (e.g.
   /// "550e8400-e29b-41d4-a716-446655440000").
   std::string toString() const;
 
-  /// Returns true if the UUID is non-empty and has the expected length
-  /// (36 characters).
-  bool isValid() const;
-
-  /// Compares two UUIDs for equality.
-  bool operator==(const UUID& other) const;
-  bool operator!=(const UUID& other) const;
-
   private:
-  std::string m_uuid;
+  std::array<std::uint8_t, 16> uuid_;
 };

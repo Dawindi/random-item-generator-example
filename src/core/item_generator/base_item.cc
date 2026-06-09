@@ -53,7 +53,7 @@ bool BaseItem::isValid() const
 {
   using std::string_view;
 
-  return uuid_.isValid() && weight_ >= 0.0f &&
+  return weight_ >= 0.0f &&
          !string_view(item::rarityToString(rarity_)).empty() &&
          !string_view(item::typeToString(type_)).empty();
 }
