@@ -1,0 +1,13 @@
+{
+  "uuid": "00000000-0000-0000-0000-000000000000",
+  "name": "Flaming Sword",
+  "description": "A blade wreathed in eternal flame.",
+  "weight": 4.0,
+  "rarity": "Rare",
+  "type": "OneHandedPrimary",
+  "status": "OWNED",
+  "damage": {
+    "Physical": 8,
+    "Fire": 12
+  }
+}
