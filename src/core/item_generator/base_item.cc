@@ -1,5 +1,4 @@
 #include "base_item.h"
-#include "item_type.h"
 
 #include <string_view>
 
