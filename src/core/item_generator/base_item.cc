@@ -52,9 +52,14 @@ bool BaseItem::isValid() const
 {
   using std::string_view;
 
-  return weight_ >= 0.0f &&
-         !string_view(item::rarityToString(rarity_)).empty() &&
-         !string_view(item::typeToString(type_)).empty();
+  const bool valid_rarity = !string_view(item::rarityToString(rarity_)).empty();
+  const bool valid_type = !string_view(item::typeToString(type_)).empty();
+  const bool valid_weight = weight_ >= 0.0f;
+  const bool valid_owner_when_owned =
+    (owner_ != std::nullopt && status_ != item::Status::NOT_OWNDED) ||
+    (owner_ == std::nullopt && status_ == item::Status::NOT_OWNDED);
+
+  return valid_weight && valid_rarity && valid_type && valid_owner_when_owned;
 }
 
 bool BaseItem::isEquivalent(const InterfaceItem& other) const

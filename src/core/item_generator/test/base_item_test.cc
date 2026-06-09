@@ -57,7 +57,7 @@ class BaseItemTest : public ::testing::Test
               .withWeight(3.5f)
               .withRarity(item::Rarity::Common)
               .withType(item::Type::OneHandedPrimary)
-              .withStatus(item::Status::OWNED)
+              .withStatus(item::Status::NOT_OWNDED)
               .build();
   }
 
@@ -149,6 +149,7 @@ TEST_F(BaseItemTest, IsValid_ZeroWeight)
                 .withWeight(0.0f)
                 .withRarity(item::Rarity::Common)
                 .withType(item::Type::OneHandedPrimary)
+                .withStatus(item::Status::NOT_OWNDED)
                 .build();
   EXPECT_TRUE(item.isValid());
 }
@@ -278,7 +279,7 @@ TEST_F(BaseItemTest, ToJson)
     EXPECT_EQ(j["weight"], 3.5);
     EXPECT_EQ(j["rarity"], "Common");
     EXPECT_EQ(j["type"], "OneHandedPrimary");
-    EXPECT_EQ(j["status"], "OWNED");
+    EXPECT_EQ(j["status"], "NOT_OWNDED");
     EXPECT_FALSE(j.contains("owner"));
   }
 
