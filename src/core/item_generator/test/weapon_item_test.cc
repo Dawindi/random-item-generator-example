@@ -588,14 +588,16 @@ TEST_F(WeaponItemTest, FromJson_DamageCaseInsensitive)
 
 TEST_F(WeaponItemTest, FromJson_FileNotFound)
 {
-  EXPECT_FALSE(WeaponItemBuilder::fromJson(std::string("nonexistent_file.json"))
-                 .has_value());
+  EXPECT_FALSE(
+    WeaponItemBuilder::fromJson(std::filesystem::path{"nonexistent_file.json"})
+      .has_value());
 }
 
 TEST_F(WeaponItemTest, FromJson_InvalidSyntax)
 {
-  EXPECT_FALSE(
-    WeaponItemBuilder::fromJson(dataPath("invalid_syntax.json")).has_value());
+  EXPECT_FALSE(WeaponItemBuilder::fromJson(
+                 std::filesystem::path{dataPath("invalid_syntax.json")})
+                 .has_value());
 }
 
 } // namespace

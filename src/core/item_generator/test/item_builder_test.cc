@@ -252,7 +252,8 @@ TEST_F(ItemBuilderFromJsonTest, FromJsonObject_InvalidStatusString)
 // =============================================================================
 TEST_F(ItemBuilderFromJsonTest, FromJsonFile_Success)
 {
-  auto item = ItemBuilder::fromJson(dataPath("valid_item.json"));
+  auto item =
+    ItemBuilder::fromJson(std::filesystem::path{dataPath("valid_item.json")});
   ASSERT_TRUE(item.has_value());
 
   EXPECT_EQ(item->getName(), "Iron Sword");
@@ -265,20 +266,23 @@ TEST_F(ItemBuilderFromJsonTest, FromJsonFile_Success)
 
 TEST_F(ItemBuilderFromJsonTest, FromJsonFile_FileNotFound)
 {
-  EXPECT_FALSE(
-    ItemBuilder::fromJson(dataPath("does_not_exist.json")).has_value());
+  EXPECT_FALSE(ItemBuilder::fromJson(
+                 std::filesystem::path{dataPath("does_not_exist.json")})
+                 .has_value());
 }
 
 TEST_F(ItemBuilderFromJsonTest, FromJsonFile_InvalidJson)
 {
-  EXPECT_FALSE(
-    ItemBuilder::fromJson(dataPath("invalid_syntax.json")).has_value());
+  EXPECT_FALSE(ItemBuilder::fromJson(
+                 std::filesystem::path{dataPath("invalid_syntax.json")})
+                 .has_value());
 }
 
 TEST_F(ItemBuilderFromJsonTest, FromJsonFile_MissingRequiredField)
 {
   EXPECT_FALSE(
-    ItemBuilder::fromJson(dataPath("missing_name.json")).has_value());
+    ItemBuilder::fromJson(std::filesystem::path{dataPath("missing_name.json")})
+      .has_value());
 }
 
 // =============================================================================

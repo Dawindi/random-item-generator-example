@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <optional>
 #include <string>
 
@@ -67,7 +68,7 @@ class ItemBuilder
 
   /// Creates a BaseItem from a JSON file at the given path. Returns
   /// std::nullopt if the file cannot be read or the JSON is invalid.
-  static std::optional<BaseItem> fromJson(const std::string& path);
+  static std::optional<BaseItem> fromJson(const std::filesystem::path& path);
 
   /// Creates a duplicate of the given item with a new UUID. All fields
   /// except the UUID are copied from the original. The owner is set to the

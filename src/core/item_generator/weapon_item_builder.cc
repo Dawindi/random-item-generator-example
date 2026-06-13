@@ -1,5 +1,6 @@
 #include "weapon_item_builder.h"
 
+#include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <optional>
@@ -127,7 +128,8 @@ std::optional<WeaponItem> WeaponItemBuilder::fromJson(const nlohmann::json& j)
   return item;
 }
 
-std::optional<WeaponItem> WeaponItemBuilder::fromJson(const std::string& path)
+std::optional<WeaponItem>
+WeaponItemBuilder::fromJson(const std::filesystem::path& path)
 {
   std::ifstream in(path);
   if (!in.is_open())

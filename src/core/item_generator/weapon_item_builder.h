@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <optional>
 #include <string>
 
@@ -78,7 +79,7 @@ class WeaponItemBuilder
 
   /// Creates a WeaponItem from a JSON file at the given path. Returns
   /// std::nullopt if the file cannot be read or the JSON is invalid.
-  static std::optional<WeaponItem> fromJson(const std::string& path);
+  static std::optional<WeaponItem> fromJson(const std::filesystem::path& path);
 
   private:
   WeaponItem item_;

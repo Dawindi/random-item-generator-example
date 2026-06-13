@@ -1,5 +1,6 @@
 #include "item_builder.h"
 
+#include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <optional>
@@ -96,7 +97,7 @@ std::optional<BaseItem> ItemBuilder::fromJson(const nlohmann::json& j)
   return item;
 }
 
-std::optional<BaseItem> ItemBuilder::fromJson(const std::string& path)
+std::optional<BaseItem> ItemBuilder::fromJson(const std::filesystem::path& path)
 {
   std::ifstream in(path);
   if (!in.is_open())
