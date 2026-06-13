@@ -8,6 +8,10 @@ add_library(item_generator STATIC
     weapon_item.h
     weapon_item_builder.cc
     weapon_item_builder.h
+    armor_item.cc
+    armor_item.h
+    armor_item_builder.cc
+    armor_item_builder.h
 )
 
 target_include_directories(item_generator PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

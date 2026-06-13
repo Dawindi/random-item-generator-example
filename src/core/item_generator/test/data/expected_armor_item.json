@@ -1,0 +1,13 @@
+{
+  "uuid": "00000000-0000-0000-0000-000000000000",
+  "name": "Dragon Scale Chestplate",
+  "description": "Chestplate forged from the scales of an ancient dragon.",
+  "weight": 12.0,
+  "rarity": "Epic",
+  "type": "ChestGear",
+  "status": "OWNED",
+  "damage_resistance": {
+    "Physical": 25.0,
+    "Fire": 50.0
+  }
+}
