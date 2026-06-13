@@ -1,11 +1,9 @@
 #pragma once
 
 #include <map>
-#include <string>
 
 #include "base_item.h"
 #include "item_data_types/item_damage_type.h"
-#include "item_data_types/item_type.h"
 
 class WeaponItemBuilder;
 
