@@ -87,6 +87,10 @@ std::optional<WeaponItem> WeaponItemBuilder::fromJson(const nlohmann::json& j)
     return std::nullopt;
   if (!j.contains("status") || !j["status"].is_string())
     return std::nullopt;
+  if (!j.contains("damage") || !j["damage"].is_object())
+    return std::nullopt;
+  if (!j.contains("rangeInMeters") || !j["rangeInMeters"].is_number())
+    return std::nullopt;
 
   auto rarity = item::rarityFromString(j["rarity"]);
   if (!rarity.has_value())
@@ -107,23 +111,17 @@ std::optional<WeaponItem> WeaponItemBuilder::fromJson(const nlohmann::json& j)
   item.setRarity(*rarity);
   item.setType(*type);
   item.setStatus(*status);
+  item.setRangeInMeters(static_cast<float>(j["rangeInMeters"]));
 
-  // Parse optional damage object
-  if (j.contains("damage") && j["damage"].is_object())
+  // Parse damage object
+  for (const auto& [key, value] : j["damage"].items())
   {
-    for (const auto& [key, value] : j["damage"].items())
-    {
-      if (!value.is_number_integer())
-        continue;
-      auto dt = item::damageTypeFromString(key);
-      if (dt.has_value())
-        item.setDamage(*dt, static_cast<int>(value));
-    }
+    if (!value.is_number_integer())
+      continue;
+    auto dt = item::damageTypeFromString(key);
+    if (dt.has_value())
+      item.setDamage(*dt, static_cast<int>(value));
   }
-
-  // Parse optional rangeInMeters
-  if (j.contains("rangeInMeters") && j["rangeInMeters"].is_number())
-    item.setRangeInMeters(static_cast<float>(j["rangeInMeters"]));
 
   return item;
 }
