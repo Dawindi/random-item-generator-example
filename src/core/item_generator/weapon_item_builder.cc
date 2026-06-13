@@ -13,8 +13,8 @@ WeaponItemBuilder& WeaponItemBuilder::withName(const std::string& name)
   return *this;
 }
 
-WeaponItemBuilder& WeaponItemBuilder::withDescription(
-  const std::string& description)
+WeaponItemBuilder&
+WeaponItemBuilder::withDescription(const std::string& description)
 {
   item_.setDescription(description);
   return *this;
@@ -117,8 +117,7 @@ std::optional<WeaponItem> WeaponItemBuilder::fromJson(const nlohmann::json& j)
   return item;
 }
 
-std::optional<WeaponItem> WeaponItemBuilder::fromJson(
-  const std::string& path)
+std::optional<WeaponItem> WeaponItemBuilder::fromJson(const std::string& path)
 {
   std::ifstream in(path);
   if (!in.is_open())
