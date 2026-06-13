@@ -61,6 +61,7 @@ class WeaponItemTest : public ::testing::Test
               .withStatus(item::Status::NOT_OWNDED)
               .withDamage(item::DamageType::Physical, 5)
               .withDamage(item::DamageType::Fire, 3)
+              .withRangeInMeters(1.5f)
               .build();
   }
 
@@ -81,6 +82,7 @@ TEST_F(WeaponItemTest, DefaultConstruction)
   EXPECT_TRUE(fresh.getDescription().empty());
   EXPECT_FALSE(fresh.getOwner().has_value());
   EXPECT_TRUE(fresh.getDamage().empty());
+  EXPECT_FLOAT_EQ(fresh.getRangeInMeters(), 0.1f);
 }
 
 // =============================================================================
@@ -116,6 +118,62 @@ TEST_F(WeaponItemTest, SetAndGetDamage)
                  .build();
   ASSERT_EQ(sword.getDamage().size(), 1u);
   EXPECT_EQ(sword.getDamage().at(item::DamageType::Physical), 99);
+}
+
+// =============================================================================
+//  Range
+// =============================================================================
+TEST_F(WeaponItemTest, SetAndGetRange)
+{
+  EXPECT_FLOAT_EQ(item_.getRangeInMeters(), 1.5f);
+
+  auto bow = WeaponItemBuilder()
+               .withName("Longbow")
+               .withType(item::Type::TwoHandedPrimary)
+               .withRarity(item::Rarity::Common)
+               .withWeight(2.0f)
+               .withRangeInMeters(100.0f)
+               .build();
+  EXPECT_FLOAT_EQ(bow.getRangeInMeters(), 100.0f);
+}
+
+TEST_F(WeaponItemTest, IsValid_NegativeRange)
+{
+  auto item = WeaponItemBuilder()
+                .withName("Sword")
+                .withType(item::Type::OneHandedPrimary)
+                .withRarity(item::Rarity::Common)
+                .withWeight(2.0f)
+                .withStatus(item::Status::NOT_OWNDED)
+                .withRangeInMeters(-1.0f)
+                .build();
+  EXPECT_FALSE(item.isValid());
+}
+
+TEST_F(WeaponItemTest, IsValid_ZeroRange)
+{
+  auto item = WeaponItemBuilder()
+                .withName("Sword")
+                .withType(item::Type::OneHandedPrimary)
+                .withRarity(item::Rarity::Common)
+                .withWeight(2.0f)
+                .withStatus(item::Status::NOT_OWNDED)
+                .withRangeInMeters(0.0f)
+                .build();
+  EXPECT_FALSE(item.isValid());
+}
+
+TEST_F(WeaponItemTest, IsValid_PositiveRange)
+{
+  auto item = WeaponItemBuilder()
+                .withName("Sword")
+                .withType(item::Type::OneHandedPrimary)
+                .withRarity(item::Rarity::Common)
+                .withWeight(2.0f)
+                .withStatus(item::Status::NOT_OWNDED)
+                .withRangeInMeters(0.1f)
+                .build();
+  EXPECT_TRUE(item.isValid());
 }
 
 // =============================================================================
@@ -267,6 +325,7 @@ TEST_F(WeaponItemTest, IsEquivalent_MatchingDamage)
                  .withType(item_.getType())
                  .withDamage(item::DamageType::Physical, 5)
                  .withDamage(item::DamageType::Fire, 3)
+                 .withRangeInMeters(1.5f)
                  .withStatus(item::Status::NOT_OWNDED)
                  .build();
   EXPECT_TRUE(item_.isEquivalent(other));
@@ -296,6 +355,22 @@ TEST_F(WeaponItemTest, IsEquivalent_DifferentDamageTypes)
                  .withRarity(item_.getRarity())
                  .withType(item_.getType())
                  .withDamage(item::DamageType::Cold, 5)
+                 .withStatus(item::Status::NOT_OWNDED)
+                 .build();
+  EXPECT_FALSE(item_.isEquivalent(other));
+}
+
+TEST_F(WeaponItemTest, IsEquivalent_DifferentRange)
+{
+  auto other = WeaponItemBuilder()
+                 .withName(item_.getName())
+                 .withDescription(item_.getDescription())
+                 .withWeight(item_.getWeight())
+                 .withRarity(item_.getRarity())
+                 .withType(item_.getType())
+                 .withDamage(item::DamageType::Physical, 5)
+                 .withDamage(item::DamageType::Fire, 3)
+                 .withRangeInMeters(99.0f)
                  .withStatus(item::Status::NOT_OWNDED)
                  .build();
   EXPECT_FALSE(item_.isEquivalent(other));
@@ -346,6 +421,7 @@ TEST_F(WeaponItemTest, IsEqual_EquivalentButDifferentUUID)
                  .withType(item_.getType())
                  .withDamage(item::DamageType::Physical, 5)
                  .withDamage(item::DamageType::Fire, 3)
+                 .withRangeInMeters(1.5f)
                  .withStatus(item::Status::NOT_OWNDED)
                  .build();
   // Same properties, different UUID → not equal
@@ -368,6 +444,7 @@ TEST_F(WeaponItemTest, ToJson_WithDamage)
   EXPECT_TRUE(j.contains("damage"));
   EXPECT_EQ(j["damage"]["Physical"], 5);
   EXPECT_EQ(j["damage"]["Fire"], 3);
+  EXPECT_EQ(j["rangeInMeters"], 1.5);
 }
 
 TEST_F(WeaponItemTest, ToJson_WithoutDamage)
@@ -424,9 +501,21 @@ TEST_F(WeaponItemTest, ToJson_MatchesExpectedFile)
   auto raw = readFile(dataPath("expected_weapon_item.json"));
   replaceAll(raw, "00000000-0000-0000-0000-000000000000",
              sword.getUUID().toString());
-  const json expected = json::parse(raw);
+  auto expectedJson = json::parse(raw);
 
-  EXPECT_EQ(sword.toJson(), expected);
+  auto actualJson = sword.toJson();
+
+  // Float comparison: verify rangeInMeters within tolerance.
+  ASSERT_TRUE(actualJson.contains("rangeInMeters"));
+  ASSERT_TRUE(expectedJson.contains("rangeInMeters"));
+  EXPECT_NEAR(actualJson["rangeInMeters"].get<float>(),
+              expectedJson["rangeInMeters"].get<float>(), 1e-5f);
+
+  // Normalise range so structural comparison succeeds.
+  actualJson["rangeInMeters"] = 0;
+  expectedJson["rangeInMeters"] = 0;
+
+  EXPECT_EQ(actualJson, expectedJson);
 }
 
 // =============================================================================
@@ -447,6 +536,8 @@ TEST_F(WeaponItemTest, FromJson_RoundTrip)
   EXPECT_EQ(restored->getStatus(), item_.getStatus());
   // Damage matches
   EXPECT_EQ(restored->getDamage(), item_.getDamage());
+  // Range matches
+  EXPECT_FLOAT_EQ(restored->getRangeInMeters(), item_.getRangeInMeters());
   // UUIDs differ (fromJson always creates a new UUID)
   EXPECT_NE(restored->getUUID(), item_.getUUID());
 }

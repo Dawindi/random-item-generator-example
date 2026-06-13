@@ -62,6 +62,9 @@ class WeaponItemBuilder
   /// calls with different types accumulate damage entries.
   WeaponItemBuilder& withDamage(item::DamageType type, int amount);
 
+  /// Sets the weapon's range in meters.
+  WeaponItemBuilder& withRangeInMeters(float range);
+
   /// Builds and returns the constructed WeaponItem. After calling build(),
   /// the builder is left in a moved-from state and should not be reused.
   WeaponItem build();

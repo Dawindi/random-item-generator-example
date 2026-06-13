@@ -63,6 +63,12 @@ WeaponItemBuilder& WeaponItemBuilder::withDamage(item::DamageType type,
   return *this;
 }
 
+WeaponItemBuilder& WeaponItemBuilder::withRangeInMeters(float range)
+{
+  item_.setRangeInMeters(range);
+  return *this;
+}
+
 WeaponItem WeaponItemBuilder::build() { return std::move(item_); }
 
 std::optional<WeaponItem> WeaponItemBuilder::fromJson(const nlohmann::json& j)
@@ -113,6 +119,10 @@ std::optional<WeaponItem> WeaponItemBuilder::fromJson(const nlohmann::json& j)
         item.setDamage(*dt, static_cast<int>(value));
     }
   }
+
+  // Parse optional rangeInMeters
+  if (j.contains("rangeInMeters") && j["rangeInMeters"].is_number())
+    item.setRangeInMeters(static_cast<float>(j["rangeInMeters"]));
 
   return item;
 }

@@ -9,5 +9,6 @@
   "damage": {
     "Physical": 8,
     "Fire": 12
-  }
+  },
+  "rangeInMeters": 0.1
 }

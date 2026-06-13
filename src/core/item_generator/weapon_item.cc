@@ -1,5 +1,7 @@
 #include "weapon_item.h"
 
+#include <cmath>
+
 WeaponItem::WeaponItem() : BaseItem() {}
 
 json WeaponItem::toJson() const
@@ -12,6 +14,7 @@ json WeaponItem::toJson() const
       damageJson[item::typeToString(type)] = amount;
     j["damage"] = damageJson;
   }
+  j["rangeInMeters"] = itemRangeInMeters_;
   return j;
 }
 
@@ -24,6 +27,10 @@ void WeaponItem::setDamage(item::DamageType type, int amount)
 {
   damage_[type] = amount;
 }
+
+float WeaponItem::getRangeInMeters() const { return itemRangeInMeters_; }
+
+void WeaponItem::setRangeInMeters(float range) { itemRangeInMeters_ = range; }
 
 bool WeaponItem::isValid() const
 {
@@ -39,6 +46,9 @@ bool WeaponItem::isValid() const
     return false;
   }
 
+  if (itemRangeInMeters_ <= 0.0f)
+    return false;
+
   return true;
 }
 
@@ -52,7 +62,13 @@ bool WeaponItem::isEquivalent(const InterfaceItem& other) const
   if (!otherWeapon)
     return false;
 
-  return damage_ == otherWeapon->damage_;
+  // Compare range with a small tolerance to avoid float-precision
+  // mismatches (e.g. 0.1f vs parsed double 0.1).
+  constexpr float kEpsilon = 1e-5f;
+  const bool rangeEquivalent =
+    std::abs(itemRangeInMeters_ - otherWeapon->itemRangeInMeters_) < kEpsilon;
+
+  return damage_ == otherWeapon->damage_ && rangeEquivalent;
 }
 
 bool WeaponItem::isEqual(const InterfaceItem& other) const

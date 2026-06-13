@@ -26,6 +26,8 @@ class WeaponItem : public BaseItem
 
   const std::map<item::DamageType, int>& getDamage() const;
 
+  float getRangeInMeters() const;
+
   bool isValid() const override;
   bool isEquivalent(const InterfaceItem& other) const override;
   bool isEqual(const InterfaceItem& other) const override;
@@ -34,6 +36,8 @@ class WeaponItem : public BaseItem
   WeaponItem();
 
   void setDamage(item::DamageType type, int amount);
+  void setRangeInMeters(float range);
 
   std::map<item::DamageType, int> damage_;
+  float itemRangeInMeters_ = 0.1f;
 };
