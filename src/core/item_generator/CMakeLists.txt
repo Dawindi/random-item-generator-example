@@ -18,12 +18,14 @@ target_include_directories(item_generator PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 add_library(item_generator::item_generator ALIAS item_generator)
 
 add_subdirectory(item_data_types)
+add_subdirectory(item_preset)
 
 target_link_libraries(item_generator
     PUBLIC
         uuid::uuid
         nlohmann_json::nlohmann_json
         item_data_types::item_data_types
+        item_preset::item_preset
 )
 
 if(BUILD_TESTS)
