@@ -50,6 +50,7 @@ class BaseItem : public InterfaceItem
   void setStatus(item::Status status) final override;
   void setOwner(std::optional<UUID> owner) final override;
 
+  private:
   UUID uuid_;
   std::string name_;
   std::string description_;

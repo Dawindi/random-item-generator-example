@@ -64,7 +64,7 @@ class ItemBuilder
   /// fields are missing or values are invalid. The item receives a new UUID;
   /// any "uuid" field in the JSON is ignored. The "owner" field is also
   /// ignored (UUIDs cannot be constructed from strings).
-  static std::optional<BaseItem> fromJson(const nlohmann::json& j);
+  static std::optional<BaseItem> fromJson(const nlohmann::json& data);
 
   /// Creates a BaseItem from a JSON file at the given path. Returns
   /// std::nullopt if the file cannot be read or the JSON is invalid.

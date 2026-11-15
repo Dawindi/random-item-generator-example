@@ -38,6 +38,8 @@ class WeaponItem : public BaseItem
   void setDamage(item::DamageType type, int amount);
   void setRangeInMeters(float range);
 
+  private:
   std::map<item::DamageType, int> damage_;
-  float itemRangeInMeters_ = 0.1f;
+  static constexpr float kDefaultRangeInMeters = 0.1F;
+  float itemRangeInMeters_ = kDefaultRangeInMeters;
 };

@@ -17,13 +17,6 @@ target_link_libraries(base_item_test
         GTest::gtest_main
 )
 
-# Copy test data files to the build directory so tests can find them at runtime
-add_custom_command(TARGET base_item_test POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_CURRENT_SOURCE_DIR}/data
-    $<TARGET_FILE_DIR:base_item_test>/data
-)
-
 # -----------------------------------------------------------------------------
 #  ItemBuilder Unit Tests
 # -----------------------------------------------------------------------------
@@ -41,13 +34,6 @@ target_link_libraries(item_builder_test
         item_data_types::item_data_types
         GTest::gtest
         GTest::gtest_main
-)
-
-# Copy test data files to the build directory so tests can find them at runtime
-add_custom_command(TARGET item_builder_test POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_CURRENT_SOURCE_DIR}/data
-    $<TARGET_FILE_DIR:item_builder_test>/data
 )
 
 # -----------------------------------------------------------------------------
@@ -69,13 +55,6 @@ target_link_libraries(weapon_item_test
         GTest::gtest_main
 )
 
-# Copy test data files to the build directory so tests can find them at runtime
-add_custom_command(TARGET weapon_item_test POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_CURRENT_SOURCE_DIR}/data
-    $<TARGET_FILE_DIR:weapon_item_test>/data
-)
-
 # -----------------------------------------------------------------------------
 #  ArmorItem Unit Tests
 # -----------------------------------------------------------------------------
@@ -93,13 +72,6 @@ target_link_libraries(armor_item_test
         item_data_types::item_data_types
         GTest::gtest
         GTest::gtest_main
-)
-
-# Copy test data files to the build directory so tests can find them at runtime
-add_custom_command(TARGET armor_item_test POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_CURRENT_SOURCE_DIR}/data
-    $<TARGET_FILE_DIR:armor_item_test>/data
 )
 
 include(GoogleTest)

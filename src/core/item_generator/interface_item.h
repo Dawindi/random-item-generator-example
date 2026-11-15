@@ -5,7 +5,7 @@
 
 #include "uuid.h"
 
-using json = nlohmann::json;
+using nlohmann::json;
 
 namespace item
 {
@@ -55,6 +55,19 @@ class InterfaceItem
   // modification.
   virtual const std::optional<UUID>& getOwner() const = 0;
 
+  // - Checks -
+  // isValid returns whether the item is valid (weight is
+  // non-negative, and rarity/type are known values).
+  virtual bool isValid() const = 0;
+
+  // isEquivalent returns whether the item is equivalent to another item without
+  // considering UUID equality.
+  virtual bool isEquivalent(const InterfaceItem&) const = 0;
+
+  // isEqual returns whether the item is equal to another item without
+  // considering UUID equality.
+  virtual bool isEqual(const InterfaceItem&) const = 0;
+
   protected:
   // - Setters -
   // name sets the item's name to the given value.
@@ -77,17 +90,4 @@ class InterfaceItem
 
   // owner sets the item's owner to the given value.
   virtual void setOwner(std::optional<UUID>) = 0;
-
-  // - Checks -
-  // isValid returns whether the item is valid (weight is
-  // non-negative, and rarity/type are known values).
-  virtual bool isValid() const = 0;
-
-  // isEquivalent returns whether the item is equivalent to another item without
-  // considering UUID equality.
-  virtual bool isEquivalent(const InterfaceItem&) const = 0;
-
-  // isEqual returns whether the item is equal to another item without
-  // considering UUID equality.
-  virtual bool isEqual(const InterfaceItem&) const = 0;
 };

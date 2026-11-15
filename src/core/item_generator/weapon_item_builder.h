@@ -75,7 +75,7 @@ class WeaponItemBuilder
   /// new UUID; any "uuid" field in the JSON is ignored. The "owner" field is
   /// also ignored (UUIDs cannot be constructed from strings). An optional
   /// "damage" object maps damage-type strings to integer amounts.
-  static std::optional<WeaponItem> fromJson(const nlohmann::json& j);
+  static std::optional<WeaponItem> fromJson(const nlohmann::json& data);
 
   /// Creates a WeaponItem from a JSON file at the given path. Returns
   /// std::nullopt if the file cannot be read or the JSON is invalid.

@@ -72,7 +72,7 @@ class ArmorItemBuilder
   /// new UUID; any "uuid" field in the JSON is ignored. The "owner" field is
   /// also ignored (UUIDs cannot be constructed from strings). An optional
   /// "damage_resistance" object maps damage-type strings to float amounts.
-  static std::optional<ArmorItem> fromJson(const nlohmann::json& j);
+  static std::optional<ArmorItem> fromJson(const nlohmann::json& data);
 
   /// Creates an ArmorItem from a JSON file at the given path. Returns
   /// std::nullopt if the file cannot be read or the JSON is invalid.

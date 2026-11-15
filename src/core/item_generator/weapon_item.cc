@@ -1,24 +1,31 @@
 #include "weapon_item.h"
+#include "base_item.h"
+#include "interface_item.h"
+#include "item_damage_type.h"
+#include "item_type.h"
 
 #include <cmath>
+#include <map>
 
-WeaponItem::WeaponItem() : BaseItem() {}
+WeaponItem::WeaponItem() = default;
 
-json WeaponItem::toJson() const
+auto WeaponItem::toJson() const -> json
 {
-  auto j = BaseItem::toJson();
+  auto result = BaseItem::toJson();
   if (!damage_.empty())
   {
     auto damageJson = json::object();
     for (const auto& [type, amount] : damage_)
+    {
       damageJson[item::typeToString(type)] = amount;
-    j["damage"] = damageJson;
+    }
+    result["damage"] = damageJson;
   }
-  j["rangeInMeters"] = itemRangeInMeters_;
-  return j;
+  result["rangeInMeters"] = itemRangeInMeters_;
+  return result;
 }
 
-const std::map<item::DamageType, int>& WeaponItem::getDamage() const
+auto WeaponItem::getDamage() const -> const std::map<item::DamageType, int>&
 {
   return damage_;
 }
@@ -28,50 +35,62 @@ void WeaponItem::setDamage(item::DamageType type, int amount)
   damage_[type] = amount;
 }
 
-float WeaponItem::getRangeInMeters() const { return itemRangeInMeters_; }
+auto WeaponItem::getRangeInMeters() const -> float
+{
+  return itemRangeInMeters_;
+}
 
 void WeaponItem::setRangeInMeters(float range) { itemRangeInMeters_ = range; }
 
-bool WeaponItem::isValid() const
+auto WeaponItem::isValid() const -> bool
 {
   if (!BaseItem::isValid())
-    return false;
-
-  // A weapon must have one of the allowed weapon-slot types.
-
-  if (const auto t = getType(); t != item::Type::OneHandedPrimary &&
-                                t != item::Type::OneHandedSecondary &&
-                                t != item::Type::TwoHandedPrimary)
   {
     return false;
   }
 
-  if (itemRangeInMeters_ <= 0.0f)
+  // A weapon must have one of the allowed weapon-slot types.
+
+  if (const auto itemType = getType();
+      itemType != item::Type::OneHandedPrimary &&
+      itemType != item::Type::OneHandedSecondary &&
+      itemType != item::Type::TwoHandedPrimary)
+  {
     return false;
+  }
+
+  if (itemRangeInMeters_ <= 0.0F)
+  {
+    return false;
+  }
 
   return true;
 }
 
-bool WeaponItem::isEquivalent(const InterfaceItem& other) const
+auto WeaponItem::isEquivalent(const InterfaceItem& other) const -> bool
 {
   if (!BaseItem::isEquivalent(other))
+  {
     return false;
+  }
 
   // Different concrete type → not equivalent.
   const auto* otherWeapon = dynamic_cast<const WeaponItem*>(&other);
-  if (!otherWeapon)
+  if (otherWeapon == nullptr)
+  {
     return false;
+  }
 
   // Compare range with a small tolerance to avoid float-precision
   // mismatches (e.g. 0.1f vs parsed double 0.1).
-  constexpr float kEpsilon = 1e-5f;
+  constexpr float kEpsilon = 1e-5F;
   const bool rangeEquivalent =
     std::abs(itemRangeInMeters_ - otherWeapon->itemRangeInMeters_) < kEpsilon;
 
   return damage_ == otherWeapon->damage_ && rangeEquivalent;
 }
 
-bool WeaponItem::isEqual(const InterfaceItem& other) const
+auto WeaponItem::isEqual(const InterfaceItem& other) const -> bool
 {
   return isEquivalent(other) && getUUID() == other.getUUID();
 }

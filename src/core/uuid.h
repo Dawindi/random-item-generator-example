@@ -29,5 +29,6 @@ class UUID
   std::string toString() const;
 
   private:
-  std::array<std::uint8_t, 16> uuid_;
+  static constexpr uint8_t kUUIDSize_ = 16;
+  std::array<std::uint8_t, kUUIDSize_> uuid_;
 };

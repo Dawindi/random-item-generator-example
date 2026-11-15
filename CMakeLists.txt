@@ -149,12 +149,18 @@ if(ENABLE_CLANG_TIDY)
     # flags are parsed correctly. Adding our own '--' separator or
     # --driver-mode here would corrupt the generated invocation.
     #
-    # clang-tidy in MSVC driver mode does not honour /EHsc, so try/catch
-    # blocks would be parsed with exceptions disabled. -fcxx-exceptions
-    # re-enables them for the analysis only (the real compile is untouched).
+    # The real compile flags (including /EHsc, passed through unchanged) keep
+    # exceptions enabled for the analysis, so no extra exception flag is
+    # needed here.
+    #
+    # clang-cl ignores -fcxx-exceptions (reporting it as an unknown argument),
+    # and with -warnings-as-errors=* that noise fails the build. Forwarding the
+    # flag to cc1 via -Xclang enables C++ exceptions for the analysis without
+    # the driver complaining.
     set(CMAKE_CXX_CLANG_TIDY
         "${CLANG_TIDY_EXECUTABLE}"
         "--config-file=${CMAKE_SOURCE_DIR}/.clang-tidy"
+        "--extra-arg=-Xclang"
         "--extra-arg=-fcxx-exceptions"
         "-warnings-as-errors=*"
     )

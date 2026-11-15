@@ -35,5 +35,6 @@ class ArmorItem : public BaseItem
 
   void setDamageResistance(item::DamageType type, float amount);
 
+  private:
   std::map<item::DamageType, float> damageResistance_;
 };

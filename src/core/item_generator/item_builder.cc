@@ -1,95 +1,122 @@
 #include "item_builder.h"
+#include "item_rarity.h"
+#include "item_status.h"
+#include "item_type.h"
+#include "nlohmann/json_fwd.hpp"
+#include "uuid.h"
 
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <sstream>
+#include <string>
+#include <utility>
 
-ItemBuilder::ItemBuilder() : item_() {}
+ItemBuilder::ItemBuilder() = default;
 
-ItemBuilder& ItemBuilder::withName(const std::string& name)
+auto ItemBuilder::withName(const std::string& name) -> ItemBuilder&
 {
   item_.setName(name);
   return *this;
 }
 
-ItemBuilder& ItemBuilder::withDescription(const std::string& description)
+auto ItemBuilder::withDescription(const std::string& description)
+  -> ItemBuilder&
 {
   item_.setDescription(description);
   return *this;
 }
 
-ItemBuilder& ItemBuilder::withWeight(float weight)
+auto ItemBuilder::withWeight(float weight) -> ItemBuilder&
 {
   item_.setWeight(weight);
   return *this;
 }
 
-ItemBuilder& ItemBuilder::withRarity(item::Rarity rarity)
+auto ItemBuilder::withRarity(item::Rarity rarity) -> ItemBuilder&
 {
   item_.setRarity(rarity);
   return *this;
 }
 
-ItemBuilder& ItemBuilder::withType(item::Type type)
+auto ItemBuilder::withType(item::Type type) -> ItemBuilder&
 {
   item_.setType(type);
   return *this;
 }
 
-ItemBuilder& ItemBuilder::withStatus(item::Status status)
+auto ItemBuilder::withStatus(item::Status status) -> ItemBuilder&
 {
   item_.setStatus(status);
   return *this;
 }
 
-ItemBuilder& ItemBuilder::withOwner(std::optional<UUID> owner)
+auto ItemBuilder::withOwner(std::optional<UUID> owner) -> ItemBuilder&
 {
   item_.setOwner(std::move(owner));
   return *this;
 }
 
-ItemBuilder& ItemBuilder::withOwner(UUID&& owner)
+auto ItemBuilder::withOwner(UUID&& owner) -> ItemBuilder&
 {
   item_.setOwner(std::optional<UUID>(std::move(owner)));
   return *this;
 }
 
-BaseItem ItemBuilder::build() { return std::move(item_); }
+auto ItemBuilder::build() -> BaseItem { return std::move(item_); }
 
-std::optional<BaseItem> ItemBuilder::fromJson(const nlohmann::json& j)
+auto ItemBuilder::fromJson(const nlohmann::json& data)
+  -> std::optional<BaseItem>
 {
   // Validate required fields
-  if (!j.contains("name") || !j["name"].is_string())
+  if (!data.contains("name") || !data["name"].is_string())
+  {
     return std::nullopt;
-  if (!j.contains("description") || !j["description"].is_string())
+  }
+  if (!data.contains("description") || !data["description"].is_string())
+  {
     return std::nullopt;
-  if (!j.contains("weight") || !j["weight"].is_number())
+  }
+  if (!data.contains("weight") || !data["weight"].is_number())
+  {
     return std::nullopt;
-  if (!j.contains("rarity") || !j["rarity"].is_string())
+  }
+  if (!data.contains("rarity") || !data["rarity"].is_string())
+  {
     return std::nullopt;
-  if (!j.contains("type") || !j["type"].is_string())
+  }
+  if (!data.contains("type") || !data["type"].is_string())
+  {
     return std::nullopt;
-  if (!j.contains("status") || !j["status"].is_string())
+  }
+  if (!data.contains("status") || !data["status"].is_string())
+  {
     return std::nullopt;
+  }
 
-  auto rarity = item::rarityFromString(j["rarity"]);
+  auto rarity = item::rarityFromString(data["rarity"]);
   if (!rarity.has_value())
+  {
     return std::nullopt;
+  }
 
-  auto type = item::typeFromString(j["type"]);
+  auto type = item::typeFromString(data["type"]);
   if (!type.has_value())
+  {
     return std::nullopt;
+  }
 
-  auto status = item::statusFromString(j["status"]);
+  auto status = item::statusFromString(data["status"]);
   if (!status.has_value())
+  {
     return std::nullopt;
+  }
 
   BaseItem item;
-  item.setName(j["name"]);
-  item.setDescription(j["description"]);
-  item.setWeight(static_cast<float>(j["weight"]));
+  item.setName(data["name"]);
+  item.setDescription(data["description"]);
+  item.setWeight(static_cast<float>(data["weight"]));
   item.setRarity(*rarity);
   item.setType(*type);
   item.setStatus(*status);
@@ -97,14 +124,17 @@ std::optional<BaseItem> ItemBuilder::fromJson(const nlohmann::json& j)
   return item;
 }
 
-std::optional<BaseItem> ItemBuilder::fromJson(const std::filesystem::path& path)
+auto ItemBuilder::fromJson(const std::filesystem::path& path)
+  -> std::optional<BaseItem>
 {
-  std::ifstream in(path);
-  if (!in.is_open())
+  std::ifstream const input(path);
+  if (!input.is_open())
+  {
     return std::nullopt;
+  }
 
   std::ostringstream oss;
-  oss << in.rdbuf();
+  oss << input.rdbuf();
 
   try
   {
@@ -116,8 +146,8 @@ std::optional<BaseItem> ItemBuilder::fromJson(const std::filesystem::path& path)
   }
 }
 
-BaseItem ItemBuilder::duplicateItem(const BaseItem& original,
-                                    std::optional<UUID> owner)
+auto ItemBuilder::duplicateItem(const BaseItem& original,
+                                std::optional<UUID> owner) -> BaseItem
 {
   BaseItem item;
   item.setName(original.getName());

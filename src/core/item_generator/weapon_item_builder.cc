@@ -1,140 +1,178 @@
 #include "weapon_item_builder.h"
+#include "item_damage_type.h"
+#include "item_rarity.h"
+#include "item_status.h"
+#include "item_type.h"
+#include "nlohmann/json_fwd.hpp"
+#include "uuid.h"
 
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <sstream>
+#include <string>
+#include <utility>
 
-WeaponItemBuilder::WeaponItemBuilder() : item_() {}
+WeaponItemBuilder::WeaponItemBuilder() = default;
 
-WeaponItemBuilder& WeaponItemBuilder::withName(const std::string& name)
+auto WeaponItemBuilder::withName(const std::string& name) -> WeaponItemBuilder&
 {
   item_.setName(name);
   return *this;
 }
 
-WeaponItemBuilder&
-WeaponItemBuilder::withDescription(const std::string& description)
+auto WeaponItemBuilder::withDescription(const std::string& description)
+  -> WeaponItemBuilder&
 {
   item_.setDescription(description);
   return *this;
 }
 
-WeaponItemBuilder& WeaponItemBuilder::withWeight(float weight)
+auto WeaponItemBuilder::withWeight(float weight) -> WeaponItemBuilder&
 {
   item_.setWeight(weight);
   return *this;
 }
 
-WeaponItemBuilder& WeaponItemBuilder::withRarity(item::Rarity rarity)
+auto WeaponItemBuilder::withRarity(item::Rarity rarity) -> WeaponItemBuilder&
 {
   item_.setRarity(rarity);
   return *this;
 }
 
-WeaponItemBuilder& WeaponItemBuilder::withType(item::Type type)
+auto WeaponItemBuilder::withType(item::Type type) -> WeaponItemBuilder&
 {
   item_.setType(type);
   return *this;
 }
 
-WeaponItemBuilder& WeaponItemBuilder::withStatus(item::Status status)
+auto WeaponItemBuilder::withStatus(item::Status status) -> WeaponItemBuilder&
 {
   item_.setStatus(status);
   return *this;
 }
 
-WeaponItemBuilder& WeaponItemBuilder::withOwner(std::optional<UUID> owner)
+auto WeaponItemBuilder::withOwner(std::optional<UUID> owner)
+  -> WeaponItemBuilder&
 {
   item_.setOwner(std::move(owner));
   return *this;
 }
 
-WeaponItemBuilder& WeaponItemBuilder::withOwner(UUID&& owner)
+auto WeaponItemBuilder::withOwner(UUID&& owner) -> WeaponItemBuilder&
 {
   item_.setOwner(std::optional<UUID>(std::move(owner)));
   return *this;
 }
 
-WeaponItemBuilder& WeaponItemBuilder::withDamage(item::DamageType type,
-                                                 int amount)
+auto WeaponItemBuilder::withDamage(item::DamageType type, int amount)
+  -> WeaponItemBuilder&
 {
   item_.setDamage(type, amount);
   return *this;
 }
 
-WeaponItemBuilder& WeaponItemBuilder::withRangeInMeters(float range)
+auto WeaponItemBuilder::withRangeInMeters(float range) -> WeaponItemBuilder&
 {
   item_.setRangeInMeters(range);
   return *this;
 }
 
-WeaponItem WeaponItemBuilder::build() { return std::move(item_); }
+auto WeaponItemBuilder::build() -> WeaponItem { return std::move(item_); }
 
-std::optional<WeaponItem> WeaponItemBuilder::fromJson(const nlohmann::json& j)
+auto WeaponItemBuilder::fromJson(const nlohmann::json& data)
+  -> std::optional<WeaponItem>
 {
   // Validate required fields
-  if (!j.contains("name") || !j["name"].is_string())
+  if (!data.contains("name") || !data["name"].is_string())
+  {
     return std::nullopt;
-  if (!j.contains("description") || !j["description"].is_string())
+  }
+  if (!data.contains("description") || !data["description"].is_string())
+  {
     return std::nullopt;
-  if (!j.contains("weight") || !j["weight"].is_number())
+  }
+  if (!data.contains("weight") || !data["weight"].is_number())
+  {
     return std::nullopt;
-  if (!j.contains("rarity") || !j["rarity"].is_string())
+  }
+  if (!data.contains("rarity") || !data["rarity"].is_string())
+  {
     return std::nullopt;
-  if (!j.contains("type") || !j["type"].is_string())
+  }
+  if (!data.contains("type") || !data["type"].is_string())
+  {
     return std::nullopt;
-  if (!j.contains("status") || !j["status"].is_string())
+  }
+  if (!data.contains("status") || !data["status"].is_string())
+  {
     return std::nullopt;
-  if (!j.contains("damage") || !j["damage"].is_object())
+  }
+  if (!data.contains("damage") || !data["damage"].is_object())
+  {
     return std::nullopt;
-  if (!j.contains("rangeInMeters") || !j["rangeInMeters"].is_number())
+  }
+  if (!data.contains("rangeInMeters") || !data["rangeInMeters"].is_number())
+  {
     return std::nullopt;
+  }
 
-  auto rarity = item::rarityFromString(j["rarity"]);
+  auto rarity = item::rarityFromString(data["rarity"]);
   if (!rarity.has_value())
+  {
     return std::nullopt;
+  }
 
-  auto type = item::typeFromString(j["type"]);
+  auto type = item::typeFromString(data["type"]);
   if (!type.has_value())
+  {
     return std::nullopt;
+  }
 
-  auto status = item::statusFromString(j["status"]);
+  auto status = item::statusFromString(data["status"]);
   if (!status.has_value())
+  {
     return std::nullopt;
+  }
 
   WeaponItem item;
-  item.setName(j["name"]);
-  item.setDescription(j["description"]);
-  item.setWeight(static_cast<float>(j["weight"]));
+  item.setName(data["name"]);
+  item.setDescription(data["description"]);
+  item.setWeight(static_cast<float>(data["weight"]));
   item.setRarity(*rarity);
   item.setType(*type);
   item.setStatus(*status);
-  item.setRangeInMeters(static_cast<float>(j["rangeInMeters"]));
+  item.setRangeInMeters(static_cast<float>(data["rangeInMeters"]));
 
   // Parse damage object
-  for (const auto& [key, value] : j["damage"].items())
+  for (const auto& [key, value] : data["damage"].items())
   {
     if (!value.is_number_integer())
+    {
       continue;
-    auto dt = item::damageTypeFromString(key);
-    if (dt.has_value())
-      item.setDamage(*dt, static_cast<int>(value));
+    }
+    auto damageType = item::damageTypeFromString(key);
+    if (damageType.has_value())
+    {
+      item.setDamage(*damageType, static_cast<int>(value));
+    }
   }
 
   return item;
 }
 
-std::optional<WeaponItem>
-WeaponItemBuilder::fromJson(const std::filesystem::path& path)
+auto WeaponItemBuilder::fromJson(const std::filesystem::path& path)
+  -> std::optional<WeaponItem>
 {
-  std::ifstream in(path);
-  if (!in.is_open())
+  std::ifstream const input(path);
+  if (!input.is_open())
+  {
     return std::nullopt;
+  }
 
   std::ostringstream oss;
-  oss << in.rdbuf();
+  oss << input.rdbuf();
 
   try
   {

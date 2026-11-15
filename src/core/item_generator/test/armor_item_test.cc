@@ -1,46 +1,88 @@
+#include <cstddef>
 #include <gtest/gtest.h>
 
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <utility>
 
+#include "armor_item.h"
 #include "armor_item_builder.h"
 #include "item_builder.h"
 #include "item_data_types/item_damage_type.h"
 #include "item_data_types/item_rarity.h"
 #include "item_data_types/item_status.h"
 #include "item_data_types/item_type.h"
+#include "nlohmann/json_fwd.hpp"
 #include "uuid.h"
 
-using json = nlohmann::json;
+using nlohmann::json;
 
 namespace
 {
 
+// gtest's TEST_F macro expands to `void TestBody()` and its ASSERT/EXPECT
+// macros expand to `if` statements, so the trailing-return-type and
+// cognitive-complexity checks fire on code we cannot edit. These two checks
+// are suppressed for this test file for that reason.
+// NOLINTBEGIN(modernize-use-trailing-return-type,
+//             readability-function-cognitive-complexity)
+
+// Test fixture values. Weights are in arbitrary units and resistances are
+// percentages (0-100).
+constexpr float kIronHelmetWeight = 2.5F;
+constexpr float kHelmetWeight = 2.0F;
+constexpr float kTrainingHelmetWeight = 1.0F;
+constexpr float kChestplateWeight = 10.0F;
+constexpr float kGauntletsWeight = 3.0F;
+constexpr float kGreavesWeight = 4.0F;
+constexpr float kAmuletWeight = 0.5F;
+constexpr float kRingWeight = 0.2F;
+constexpr float kCoinWeight = 0.1F;
+constexpr float kFrostAmuletWeight = 0.3F;
+constexpr float kGreatswordWeight = 8.0F;
+constexpr float kDragonChestplateWeight = 12.0F;
+
+constexpr float kPhysicalResistance = 15.0F;
+constexpr float kFireResistance = 5.0F;
+constexpr float kBaseResistance = 10.0F;
+constexpr float kOverwrittenResistance = 99.0F;
+constexpr float kColdResistance = 20.0F;
+constexpr float kChaosResistance = 30.0F;
+constexpr float kArmGearResistance = 8.0F;
+constexpr float kLegGearResistance = 12.0F;
+constexpr float kAboveMaxResistance = 150.0F;
+constexpr float kJustAboveZeroResistance = 0.001F;
+constexpr float kJustBelowMaxResistance = 99.999F;
+constexpr float kMaxResistance = 100.0F;
+constexpr float kDragonPhysicalResistance = 25.0F;
+constexpr float kDragonFireResistance = 50.0F;
+
 /// Helper: read the full contents of a file as a string.
-std::string readFile(const std::string& path)
+auto readFile(const std::string& path) -> std::string
 {
-  std::ifstream in(path);
-  EXPECT_TRUE(in.is_open()) << "Failed to open: " << path;
+  std::ifstream const input(path);
+  EXPECT_TRUE(input.is_open()) << "Failed to open: " << path;
   std::ostringstream oss;
-  oss << in.rdbuf();
+  oss << input.rdbuf();
   return oss.str();
 }
 
 /// Helper: construct a path into the test data directory.
-std::string dataPath(const std::string& filename)
+auto dataPath(const std::string& filename) -> std::string
 {
   return std::string(TEST_DATA_DIR) + "/" + filename;
 }
 
 /// Helper: replace every occurrence of a substring in the source string.
-void replaceAll(std::string& s, const std::string& from, const std::string& to)
+void replaceAll(std::string& source, const std::string& from,
+                const std::string& replacement)
 {
   size_t pos = 0;
-  while ((pos = s.find(from, pos)) != std::string::npos)
+  while ((pos = source.find(from, pos)) != std::string::npos)
   {
-    s.replace(pos, from.length(), to);
-    pos += to.length();
+    source.replace(pos, from.length(), replacement);
+    pos += replacement.length();
   }
 }
 
@@ -49,21 +91,25 @@ void replaceAll(std::string& s, const std::string& from, const std::string& to)
 // =============================================================================
 class ArmorItemTest : public ::testing::Test
 {
+  public:
+  const ArmorItem& getTestItem() const { return item_; }
+
   protected:
   void SetUp() override
   {
     item_ = ArmorItemBuilder()
               .withName("Iron Helmet")
               .withDescription("A sturdy iron helmet.")
-              .withWeight(2.5f)
+              .withWeight(kIronHelmetWeight)
               .withRarity(item::Rarity::Common)
               .withType(item::Type::HeadGear)
               .withStatus(item::Status::NOT_OWNDED)
-              .withResistance(item::DamageType::Physical, 15.0f)
-              .withResistance(item::DamageType::Fire, 5.0f)
+              .withResistance(item::DamageType::Physical, kPhysicalResistance)
+              .withResistance(item::DamageType::Fire, kFireResistance)
               .build();
   }
 
+  private:
   ArmorItem item_{ArmorItemBuilder().build()};
 };
 
@@ -72,7 +118,7 @@ class ArmorItemTest : public ::testing::Test
 // =============================================================================
 TEST_F(ArmorItemTest, DefaultConstruction)
 {
-  ArmorItem fresh{ArmorItemBuilder().build()};
+  ArmorItem const fresh{ArmorItemBuilder().build()};
   EXPECT_FALSE(fresh.getUUID().toString().empty());
   // A default-constructed ArmorItem is invalid — weight, rarity, and type
   // are uninitialised and therefore fail the isValid() checks.
@@ -89,41 +135,45 @@ TEST_F(ArmorItemTest, DefaultConstruction)
 TEST_F(ArmorItemTest, SetAndGetResistance)
 {
   // Fixture item has Physical:15.0, Fire:5.0
-  const auto& res = item_.getDamageResistance();
-  ASSERT_EQ(res.size(), 2u);
-  EXPECT_FLOAT_EQ(res.at(item::DamageType::Physical), 15.0f);
-  EXPECT_FLOAT_EQ(res.at(item::DamageType::Fire), 5.0f);
+  const auto& res = getTestItem().getDamageResistance();
+  ASSERT_EQ(res.size(), 2U);
+  EXPECT_FLOAT_EQ(res.at(item::DamageType::Physical), kPhysicalResistance);
+  EXPECT_FLOAT_EQ(res.at(item::DamageType::Fire), kFireResistance);
 
   // Single resistance type
   auto coldOnly = ArmorItemBuilder()
                     .withName("Frost Amulet")
                     .withType(item::Type::Amulet)
                     .withRarity(item::Rarity::Common)
-                    .withWeight(0.3f)
-                    .withResistance(item::DamageType::Cold, 20.0f)
+                    .withWeight(kFrostAmuletWeight)
+                    .withResistance(item::DamageType::Cold, kColdResistance)
                     .build();
-  ASSERT_EQ(coldOnly.getDamageResistance().size(), 1u);
+  ASSERT_EQ(coldOnly.getDamageResistance().size(), 1U);
   EXPECT_FLOAT_EQ(coldOnly.getDamageResistance().at(item::DamageType::Cold),
-                  20.0f);
+                  kColdResistance);
 
   // Overwrite an existing resistance entry
-  auto helm = ArmorItemBuilder()
-                .withName("Helm")
-                .withType(item::Type::HeadGear)
-                .withRarity(item::Rarity::Common)
-                .withWeight(2.0f)
-                .withResistance(item::DamageType::Physical, 10.0f)
-                .withResistance(item::DamageType::Physical, 99.0f)
-                .build();
-  ASSERT_EQ(helm.getDamageResistance().size(), 1u);
+  auto helm =
+    ArmorItemBuilder()
+      .withName("Helm")
+      .withType(item::Type::HeadGear)
+      .withRarity(item::Rarity::Common)
+      .withWeight(kHelmetWeight)
+      .withResistance(item::DamageType::Physical, kBaseResistance)
+      .withResistance(item::DamageType::Physical, kOverwrittenResistance)
+      .build();
+  ASSERT_EQ(helm.getDamageResistance().size(), 1U);
   EXPECT_FLOAT_EQ(helm.getDamageResistance().at(item::DamageType::Physical),
-                  99.0f);
+                  kOverwrittenResistance);
 }
 
 // =============================================================================
 //  isValid
 // =============================================================================
-TEST_F(ArmorItemTest, IsValid_FullyBuiltItem) { EXPECT_TRUE(item_.isValid()); }
+TEST_F(ArmorItemTest, IsValid_FullyBuiltItem)
+{
+  EXPECT_TRUE(getTestItem().isValid());
+}
 
 TEST_F(ArmorItemTest, IsValid_ValidArmorTypes)
 {
@@ -132,103 +182,110 @@ TEST_F(ArmorItemTest, IsValid_ValidArmorTypes)
                     .withName("Helmet")
                     .withType(item::Type::HeadGear)
                     .withRarity(item::Rarity::Common)
-                    .withWeight(2.0f)
+                    .withWeight(kHelmetWeight)
                     .withStatus(item::Status::NOT_OWNDED)
-                    .withResistance(item::DamageType::Physical, 10.0f)
+                    .withResistance(item::DamageType::Physical, kBaseResistance)
                     .build();
   EXPECT_TRUE(headGear.isValid());
 
-  auto chestGear = ArmorItemBuilder()
-                     .withName("Chestplate")
-                     .withType(item::Type::ChestGear)
-                     .withRarity(item::Rarity::Common)
-                     .withWeight(10.0f)
-                     .withStatus(item::Status::NOT_OWNDED)
-                     .withResistance(item::DamageType::Physical, 20.0f)
-                     .build();
+  auto chestGear =
+    ArmorItemBuilder()
+      .withName("Chestplate")
+      .withType(item::Type::ChestGear)
+      .withRarity(item::Rarity::Common)
+      .withWeight(kChestplateWeight)
+      .withStatus(item::Status::NOT_OWNDED)
+      .withResistance(item::DamageType::Physical, kColdResistance)
+      .build();
   EXPECT_TRUE(chestGear.isValid());
 
-  auto armGear = ArmorItemBuilder()
-                   .withName("Gauntlets")
-                   .withType(item::Type::ArmGear)
-                   .withRarity(item::Rarity::Common)
-                   .withWeight(3.0f)
-                   .withStatus(item::Status::NOT_OWNDED)
-                   .withResistance(item::DamageType::Physical, 8.0f)
-                   .build();
+  auto armGear =
+    ArmorItemBuilder()
+      .withName("Gauntlets")
+      .withType(item::Type::ArmGear)
+      .withRarity(item::Rarity::Common)
+      .withWeight(kGauntletsWeight)
+      .withStatus(item::Status::NOT_OWNDED)
+      .withResistance(item::DamageType::Physical, kArmGearResistance)
+      .build();
   EXPECT_TRUE(armGear.isValid());
 
-  auto legGear = ArmorItemBuilder()
-                   .withName("Greaves")
-                   .withType(item::Type::LegGear)
-                   .withRarity(item::Rarity::Common)
-                   .withWeight(4.0f)
-                   .withStatus(item::Status::NOT_OWNDED)
-                   .withResistance(item::DamageType::Physical, 12.0f)
-                   .build();
+  auto legGear =
+    ArmorItemBuilder()
+      .withName("Greaves")
+      .withType(item::Type::LegGear)
+      .withRarity(item::Rarity::Common)
+      .withWeight(kGreavesWeight)
+      .withStatus(item::Status::NOT_OWNDED)
+      .withResistance(item::DamageType::Physical, kLegGearResistance)
+      .build();
   EXPECT_TRUE(legGear.isValid());
 
   auto amulet = ArmorItemBuilder()
                   .withName("Necklace")
                   .withType(item::Type::Amulet)
                   .withRarity(item::Rarity::Common)
-                  .withWeight(0.5f)
+                  .withWeight(kAmuletWeight)
                   .withStatus(item::Status::NOT_OWNDED)
-                  .withResistance(item::DamageType::Chaos, 30.0f)
+                  .withResistance(item::DamageType::Chaos, kChaosResistance)
                   .build();
   EXPECT_TRUE(amulet.isValid());
 
-  auto ring = ArmorItemBuilder()
-                .withName("Band")
-                .withType(item::Type::Ring)
-                .withRarity(item::Rarity::Common)
-                .withWeight(0.2f)
-                .withStatus(item::Status::NOT_OWNDED)
-                .withResistance(item::DamageType::Lightning, 15.0f)
-                .build();
+  auto ring =
+    ArmorItemBuilder()
+      .withName("Band")
+      .withType(item::Type::Ring)
+      .withRarity(item::Rarity::Common)
+      .withWeight(kRingWeight)
+      .withStatus(item::Status::NOT_OWNDED)
+      .withResistance(item::DamageType::Lightning, kPhysicalResistance)
+      .build();
   EXPECT_TRUE(ring.isValid());
 }
 
 TEST_F(ArmorItemTest, IsValid_InvalidArmorTypes)
 {
   // Weapon types should be rejected for armor
-  auto oneHanded = ArmorItemBuilder()
-                     .withName("Sword")
-                     .withType(item::Type::OneHandedPrimary)
-                     .withRarity(item::Rarity::Common)
-                     .withWeight(2.0f)
-                     .withStatus(item::Status::NOT_OWNDED)
-                     .withResistance(item::DamageType::Physical, 10.0f)
-                     .build();
+  auto oneHanded =
+    ArmorItemBuilder()
+      .withName("Sword")
+      .withType(item::Type::OneHandedPrimary)
+      .withRarity(item::Rarity::Common)
+      .withWeight(kHelmetWeight)
+      .withStatus(item::Status::NOT_OWNDED)
+      .withResistance(item::DamageType::Physical, kBaseResistance)
+      .build();
   EXPECT_FALSE(oneHanded.isValid());
 
-  auto twoHanded = ArmorItemBuilder()
-                     .withName("Greatsword")
-                     .withType(item::Type::TwoHandedPrimary)
-                     .withRarity(item::Rarity::Common)
-                     .withWeight(8.0f)
-                     .withStatus(item::Status::NOT_OWNDED)
-                     .withResistance(item::DamageType::Physical, 10.0f)
-                     .build();
+  auto twoHanded =
+    ArmorItemBuilder()
+      .withName("Greatsword")
+      .withType(item::Type::TwoHandedPrimary)
+      .withRarity(item::Rarity::Common)
+      .withWeight(kGreatswordWeight)
+      .withStatus(item::Status::NOT_OWNDED)
+      .withResistance(item::DamageType::Physical, kBaseResistance)
+      .build();
   EXPECT_FALSE(twoHanded.isValid());
 
-  auto consumable = ArmorItemBuilder()
-                      .withName("Potion")
-                      .withType(item::Type::Consumable)
-                      .withRarity(item::Rarity::Common)
-                      .withWeight(0.5f)
-                      .withStatus(item::Status::NOT_OWNDED)
-                      .withResistance(item::DamageType::Physical, 10.0f)
-                      .build();
+  auto consumable =
+    ArmorItemBuilder()
+      .withName("Potion")
+      .withType(item::Type::Consumable)
+      .withRarity(item::Rarity::Common)
+      .withWeight(kAmuletWeight)
+      .withStatus(item::Status::NOT_OWNDED)
+      .withResistance(item::DamageType::Physical, kBaseResistance)
+      .build();
   EXPECT_FALSE(consumable.isValid());
 
   auto currency = ArmorItemBuilder()
                     .withName("Gold")
                     .withType(item::Type::Currency)
                     .withRarity(item::Rarity::Common)
-                    .withWeight(0.1f)
+                    .withWeight(kCoinWeight)
                     .withStatus(item::Status::NOT_OWNDED)
-                    .withResistance(item::DamageType::Physical, 10.0f)
+                    .withResistance(item::DamageType::Physical, kBaseResistance)
                     .build();
   EXPECT_FALSE(currency.isValid());
 }
@@ -239,7 +296,7 @@ TEST_F(ArmorItemTest, IsValid_NoResistance)
                 .withName("Helmet")
                 .withType(item::Type::HeadGear)
                 .withRarity(item::Rarity::Common)
-                .withWeight(2.0f)
+                .withWeight(kHelmetWeight)
                 .withStatus(item::Status::NOT_OWNDED)
                 .build();
   EXPECT_FALSE(item.isValid());
@@ -251,9 +308,9 @@ TEST_F(ArmorItemTest, IsValid_ZeroResistance)
                 .withName("Helmet")
                 .withType(item::Type::HeadGear)
                 .withRarity(item::Rarity::Common)
-                .withWeight(2.0f)
+                .withWeight(kHelmetWeight)
                 .withStatus(item::Status::NOT_OWNDED)
-                .withResistance(item::DamageType::Physical, 0.0f)
+                .withResistance(item::DamageType::Physical, 0.0F)
                 .build();
   EXPECT_FALSE(item.isValid());
 }
@@ -264,9 +321,9 @@ TEST_F(ArmorItemTest, IsValid_NegativeResistance)
                 .withName("Helmet")
                 .withType(item::Type::HeadGear)
                 .withRarity(item::Rarity::Common)
-                .withWeight(2.0f)
+                .withWeight(kHelmetWeight)
                 .withStatus(item::Status::NOT_OWNDED)
-                .withResistance(item::DamageType::Physical, -1.0f)
+                .withResistance(item::DamageType::Physical, -1.0F)
                 .build();
   EXPECT_FALSE(item.isValid());
 }
@@ -277,9 +334,9 @@ TEST_F(ArmorItemTest, IsValid_ResistanceAt100)
                 .withName("Helmet")
                 .withType(item::Type::HeadGear)
                 .withRarity(item::Rarity::Common)
-                .withWeight(2.0f)
+                .withWeight(kHelmetWeight)
                 .withStatus(item::Status::NOT_OWNDED)
-                .withResistance(item::DamageType::Physical, 100.0f)
+                .withResistance(item::DamageType::Physical, kMaxResistance)
                 .build();
   // 100.0f is not strictly less than 100.0f → invalid
   EXPECT_FALSE(item.isValid());
@@ -291,36 +348,38 @@ TEST_F(ArmorItemTest, IsValid_ResistanceAbove100)
                 .withName("Helmet")
                 .withType(item::Type::HeadGear)
                 .withRarity(item::Rarity::Common)
-                .withWeight(2.0f)
+                .withWeight(kHelmetWeight)
                 .withStatus(item::Status::NOT_OWNDED)
-                .withResistance(item::DamageType::Physical, 150.0f)
+                .withResistance(item::DamageType::Physical, kAboveMaxResistance)
                 .build();
   EXPECT_FALSE(item.isValid());
 }
 
 TEST_F(ArmorItemTest, IsValid_ResistanceJustAboveZero)
 {
-  auto item = ArmorItemBuilder()
-                .withName("Helmet")
-                .withType(item::Type::HeadGear)
-                .withRarity(item::Rarity::Common)
-                .withWeight(2.0f)
-                .withStatus(item::Status::NOT_OWNDED)
-                .withResistance(item::DamageType::Physical, 0.001f)
-                .build();
+  auto item =
+    ArmorItemBuilder()
+      .withName("Helmet")
+      .withType(item::Type::HeadGear)
+      .withRarity(item::Rarity::Common)
+      .withWeight(kHelmetWeight)
+      .withStatus(item::Status::NOT_OWNDED)
+      .withResistance(item::DamageType::Physical, kJustAboveZeroResistance)
+      .build();
   EXPECT_TRUE(item.isValid());
 }
 
 TEST_F(ArmorItemTest, IsValid_ResistanceJustBelow100)
 {
-  auto item = ArmorItemBuilder()
-                .withName("Helmet")
-                .withType(item::Type::HeadGear)
-                .withRarity(item::Rarity::Common)
-                .withWeight(2.0f)
-                .withStatus(item::Status::NOT_OWNDED)
-                .withResistance(item::DamageType::Physical, 99.999f)
-                .build();
+  auto item =
+    ArmorItemBuilder()
+      .withName("Helmet")
+      .withType(item::Type::HeadGear)
+      .withRarity(item::Rarity::Common)
+      .withWeight(kHelmetWeight)
+      .withStatus(item::Status::NOT_OWNDED)
+      .withResistance(item::DamageType::Physical, kJustBelowMaxResistance)
+      .build();
   EXPECT_TRUE(item.isValid());
 }
 
@@ -330,9 +389,9 @@ TEST_F(ArmorItemTest, IsValid_NegativeWeight)
                 .withName("Helmet")
                 .withType(item::Type::HeadGear)
                 .withRarity(item::Rarity::Common)
-                .withWeight(-1.0f)
+                .withWeight(-1.0F)
                 .withStatus(item::Status::NOT_OWNDED)
-                .withResistance(item::DamageType::Physical, 10.0f)
+                .withResistance(item::DamageType::Physical, kBaseResistance)
                 .build();
   EXPECT_FALSE(item.isValid());
 }
@@ -343,9 +402,9 @@ TEST_F(ArmorItemTest, IsValid_ZeroWeight)
                 .withName("Helmet")
                 .withType(item::Type::HeadGear)
                 .withRarity(item::Rarity::Common)
-                .withWeight(0.0f)
+                .withWeight(0.0F)
                 .withStatus(item::Status::NOT_OWNDED)
-                .withResistance(item::DamageType::Physical, 10.0f)
+                .withResistance(item::DamageType::Physical, kBaseResistance)
                 .build();
   EXPECT_TRUE(item.isValid());
 }
@@ -355,127 +414,145 @@ TEST_F(ArmorItemTest, IsValid_ZeroWeight)
 // =============================================================================
 TEST_F(ArmorItemTest, IsEquivalent_MatchingResistance)
 {
-  auto other = ArmorItemBuilder()
-                 .withName(item_.getName())
-                 .withDescription(item_.getDescription())
-                 .withWeight(item_.getWeight())
-                 .withRarity(item_.getRarity())
-                 .withType(item_.getType())
-                 .withResistance(item::DamageType::Physical, 15.0f)
-                 .withResistance(item::DamageType::Fire, 5.0f)
-                 .withStatus(item::Status::NOT_OWNDED)
-                 .build();
-  EXPECT_TRUE(item_.isEquivalent(other));
+  const auto& item = getTestItem();
+  auto other =
+    ArmorItemBuilder()
+      .withName(item.getName())
+      .withDescription(item.getDescription())
+      .withWeight(item.getWeight())
+      .withRarity(item.getRarity())
+      .withType(item.getType())
+      .withResistance(item::DamageType::Physical, kPhysicalResistance)
+      .withResistance(item::DamageType::Fire, kFireResistance)
+      .withStatus(item::Status::NOT_OWNDED)
+      .build();
+  EXPECT_TRUE(item.isEquivalent(other));
 }
 
 TEST_F(ArmorItemTest, IsEquivalent_DifferentResistanceAmount)
 {
-  auto other = ArmorItemBuilder()
-                 .withName(item_.getName())
-                 .withDescription(item_.getDescription())
-                 .withWeight(item_.getWeight())
-                 .withRarity(item_.getRarity())
-                 .withType(item_.getType())
-                 .withResistance(item::DamageType::Physical, 99.0f)
-                 .withResistance(item::DamageType::Fire, 5.0f)
-                 .withStatus(item::Status::NOT_OWNDED)
-                 .build();
-  EXPECT_FALSE(item_.isEquivalent(other));
+  const auto& item = getTestItem();
+  auto other =
+    ArmorItemBuilder()
+      .withName(item.getName())
+      .withDescription(item.getDescription())
+      .withWeight(item.getWeight())
+      .withRarity(item.getRarity())
+      .withType(item.getType())
+      .withResistance(item::DamageType::Physical, kOverwrittenResistance)
+      .withResistance(item::DamageType::Fire, kFireResistance)
+      .withStatus(item::Status::NOT_OWNDED)
+      .build();
+  EXPECT_FALSE(item.isEquivalent(other));
 }
 
 TEST_F(ArmorItemTest, IsEquivalent_DifferentResistanceTypes)
 {
+  const auto& item = getTestItem();
   auto other = ArmorItemBuilder()
-                 .withName(item_.getName())
-                 .withDescription(item_.getDescription())
-                 .withWeight(item_.getWeight())
-                 .withRarity(item_.getRarity())
-                 .withType(item_.getType())
-                 .withResistance(item::DamageType::Cold, 15.0f)
+                 .withName(item.getName())
+                 .withDescription(item.getDescription())
+                 .withWeight(item.getWeight())
+                 .withRarity(item.getRarity())
+                 .withType(item.getType())
+                 .withResistance(item::DamageType::Cold, kPhysicalResistance)
                  .withStatus(item::Status::NOT_OWNDED)
                  .build();
-  EXPECT_FALSE(item_.isEquivalent(other));
+  EXPECT_FALSE(item.isEquivalent(other));
 }
 
 TEST_F(ArmorItemTest, IsEquivalent_ExtraResistanceType)
 {
-  auto other = ArmorItemBuilder()
-                 .withName(item_.getName())
-                 .withDescription(item_.getDescription())
-                 .withWeight(item_.getWeight())
-                 .withRarity(item_.getRarity())
-                 .withType(item_.getType())
-                 .withResistance(item::DamageType::Physical, 15.0f)
-                 .withResistance(item::DamageType::Fire, 5.0f)
-                 .withResistance(item::DamageType::Cold, 10.0f)
-                 .withStatus(item::Status::NOT_OWNDED)
-                 .build();
-  EXPECT_FALSE(item_.isEquivalent(other));
+  const auto& item = getTestItem();
+  auto other =
+    ArmorItemBuilder()
+      .withName(item.getName())
+      .withDescription(item.getDescription())
+      .withWeight(item.getWeight())
+      .withRarity(item.getRarity())
+      .withType(item.getType())
+      .withResistance(item::DamageType::Physical, kPhysicalResistance)
+      .withResistance(item::DamageType::Fire, kFireResistance)
+      .withResistance(item::DamageType::Cold, kBaseResistance)
+      .withStatus(item::Status::NOT_OWNDED)
+      .build();
+  EXPECT_FALSE(item.isEquivalent(other));
 }
 
 TEST_F(ArmorItemTest, IsEquivalent_FewerResistanceType)
 {
-  auto other = ArmorItemBuilder()
-                 .withName(item_.getName())
-                 .withDescription(item_.getDescription())
-                 .withWeight(item_.getWeight())
-                 .withRarity(item_.getRarity())
-                 .withType(item_.getType())
-                 .withResistance(item::DamageType::Physical, 15.0f)
-                 .withStatus(item::Status::NOT_OWNDED)
-                 .build();
-  EXPECT_FALSE(item_.isEquivalent(other));
+  const auto& item = getTestItem();
+  auto other =
+    ArmorItemBuilder()
+      .withName(item.getName())
+      .withDescription(item.getDescription())
+      .withWeight(item.getWeight())
+      .withRarity(item.getRarity())
+      .withType(item.getType())
+      .withResistance(item::DamageType::Physical, kPhysicalResistance)
+      .withStatus(item::Status::NOT_OWNDED)
+      .build();
+  EXPECT_FALSE(item.isEquivalent(other));
 }
 
 TEST_F(ArmorItemTest, IsEquivalent_DifferentCoreFields)
 {
-  auto other = ArmorItemBuilder()
-                 .withName("Steel Helmet")
-                 .withDescription(item_.getDescription())
-                 .withWeight(item_.getWeight())
-                 .withRarity(item_.getRarity())
-                 .withType(item_.getType())
-                 .withResistance(item::DamageType::Physical, 15.0f)
-                 .withResistance(item::DamageType::Fire, 5.0f)
-                 .withStatus(item::Status::NOT_OWNDED)
-                 .build();
-  EXPECT_FALSE(item_.isEquivalent(other));
+  const auto& item = getTestItem();
+  auto other =
+    ArmorItemBuilder()
+      .withName("Steel Helmet")
+      .withDescription(item.getDescription())
+      .withWeight(item.getWeight())
+      .withRarity(item.getRarity())
+      .withType(item.getType())
+      .withResistance(item::DamageType::Physical, kPhysicalResistance)
+      .withResistance(item::DamageType::Fire, kFireResistance)
+      .withStatus(item::Status::NOT_OWNDED)
+      .build();
+  EXPECT_FALSE(item.isEquivalent(other));
 }
 
 TEST_F(ArmorItemTest, IsEquivalent_DifferentConcreteType)
 {
   // An ArmorItem should not be equivalent to a BaseItem, even if core
   // fields match.
+  const auto& item = getTestItem();
   auto base = ItemBuilder()
-                .withName(item_.getName())
-                .withDescription(item_.getDescription())
-                .withWeight(item_.getWeight())
-                .withRarity(item_.getRarity())
-                .withType(item_.getType())
+                .withName(item.getName())
+                .withDescription(item.getDescription())
+                .withWeight(item.getWeight())
+                .withRarity(item.getRarity())
+                .withType(item.getType())
                 .withStatus(item::Status::NOT_OWNDED)
                 .build();
-  EXPECT_FALSE(item_.isEquivalent(base));
+  EXPECT_FALSE(item.isEquivalent(base));
 }
 
 // =============================================================================
 //  isEqual
 // =============================================================================
-TEST_F(ArmorItemTest, IsEqual_Self) { EXPECT_TRUE(item_.isEqual(item_)); }
+TEST_F(ArmorItemTest, IsEqual_Self)
+{
+  const auto& item = getTestItem();
+  EXPECT_TRUE(item.isEqual(item));
+}
 
 TEST_F(ArmorItemTest, IsEqual_EquivalentButDifferentUUID)
 {
-  auto other = ArmorItemBuilder()
-                 .withName(item_.getName())
-                 .withDescription(item_.getDescription())
-                 .withWeight(item_.getWeight())
-                 .withRarity(item_.getRarity())
-                 .withType(item_.getType())
-                 .withResistance(item::DamageType::Physical, 15.0f)
-                 .withResistance(item::DamageType::Fire, 5.0f)
-                 .withStatus(item::Status::NOT_OWNDED)
-                 .build();
+  const auto& item = getTestItem();
+  auto other =
+    ArmorItemBuilder()
+      .withName(item.getName())
+      .withDescription(item.getDescription())
+      .withWeight(item.getWeight())
+      .withRarity(item.getRarity())
+      .withType(item.getType())
+      .withResistance(item::DamageType::Physical, kPhysicalResistance)
+      .withResistance(item::DamageType::Fire, kFireResistance)
+      .withStatus(item::Status::NOT_OWNDED)
+      .build();
   // Same properties, different UUID → not equal
-  EXPECT_FALSE(item_.isEqual(other));
+  EXPECT_FALSE(item.isEqual(other));
 }
 
 // =============================================================================
@@ -483,17 +560,18 @@ TEST_F(ArmorItemTest, IsEqual_EquivalentButDifferentUUID)
 // =============================================================================
 TEST_F(ArmorItemTest, ToJson_WithResistance)
 {
-  const auto j = item_.toJson();
-  EXPECT_EQ(j["uuid"], item_.getUUID().toString());
-  EXPECT_EQ(j["name"], "Iron Helmet");
-  EXPECT_EQ(j["description"], "A sturdy iron helmet.");
-  EXPECT_EQ(j["weight"], 2.5);
-  EXPECT_EQ(j["rarity"], "Common");
-  EXPECT_EQ(j["type"], "HeadGear");
-  EXPECT_EQ(j["status"], "NOT_OWNDED");
-  EXPECT_TRUE(j.contains("damage_resistance"));
-  EXPECT_FLOAT_EQ(j["damage_resistance"]["Physical"], 15.0);
-  EXPECT_FLOAT_EQ(j["damage_resistance"]["Fire"], 5.0);
+  const auto& item = getTestItem();
+  const auto result = item.toJson();
+  EXPECT_EQ(result["uuid"], item.getUUID().toString());
+  EXPECT_EQ(result["name"], "Iron Helmet");
+  EXPECT_EQ(result["description"], "A sturdy iron helmet.");
+  EXPECT_EQ(result["weight"], kIronHelmetWeight);
+  EXPECT_EQ(result["rarity"], "Common");
+  EXPECT_EQ(result["type"], "HeadGear");
+  EXPECT_EQ(result["status"], "NOT_OWNDED");
+  EXPECT_TRUE(result.contains("damage_resistance"));
+  EXPECT_FLOAT_EQ(result["damage_resistance"]["Physical"], kPhysicalResistance);
+  EXPECT_FLOAT_EQ(result["damage_resistance"]["Fire"], kFireResistance);
 }
 
 TEST_F(ArmorItemTest, ToJson_WithoutResistance)
@@ -501,34 +579,36 @@ TEST_F(ArmorItemTest, ToJson_WithoutResistance)
   auto noRes = ArmorItemBuilder()
                  .withName("Training Helmet")
                  .withDescription("A basic practice helmet.")
-                 .withWeight(1.0f)
+                 .withWeight(kTrainingHelmetWeight)
                  .withRarity(item::Rarity::Common)
                  .withType(item::Type::HeadGear)
                  .withStatus(item::Status::NOT_OWNDED)
                  .build();
-  const auto j = noRes.toJson();
-  EXPECT_FALSE(j.contains("damage_resistance"));
+  const auto result = noRes.toJson();
+  EXPECT_FALSE(result.contains("damage_resistance"));
 }
 
 TEST_F(ArmorItemTest, ToJson_WithOwner)
 {
+  const auto& item = getTestItem();
   UUID owner;
   const auto ownerStr = owner.toString();
-  auto itemWithOwner = ArmorItemBuilder()
-                         .withName(item_.getName())
-                         .withDescription(item_.getDescription())
-                         .withWeight(item_.getWeight())
-                         .withRarity(item_.getRarity())
-                         .withType(item_.getType())
-                         .withStatus(item_.getStatus())
-                         .withResistance(item::DamageType::Physical, 15.0f)
-                         .withResistance(item::DamageType::Fire, 5.0f)
-                         .withOwner(std::move(owner))
-                         .build();
+  auto itemWithOwner =
+    ArmorItemBuilder()
+      .withName(item.getName())
+      .withDescription(item.getDescription())
+      .withWeight(item.getWeight())
+      .withRarity(item.getRarity())
+      .withType(item.getType())
+      .withStatus(item.getStatus())
+      .withResistance(item::DamageType::Physical, kPhysicalResistance)
+      .withResistance(item::DamageType::Fire, kFireResistance)
+      .withOwner(std::move(owner))
+      .build();
 
-  const auto j = itemWithOwner.toJson();
-  EXPECT_TRUE(j.contains("owner"));
-  EXPECT_EQ(j["owner"], ownerStr);
+  const auto result = itemWithOwner.toJson();
+  EXPECT_TRUE(result.contains("owner"));
+  EXPECT_EQ(result["owner"], ownerStr);
 }
 
 // =============================================================================
@@ -541,12 +621,12 @@ TEST_F(ArmorItemTest, ToJson_MatchesExpectedFile)
       .withName("Dragon Scale Chestplate")
       .withDescription(
         "Chestplate forged from the scales of an ancient dragon.")
-      .withWeight(12.0f)
+      .withWeight(kDragonChestplateWeight)
       .withRarity(item::Rarity::Epic)
       .withType(item::Type::ChestGear)
       .withStatus(item::Status::OWNED)
-      .withResistance(item::DamageType::Physical, 25.0f)
-      .withResistance(item::DamageType::Fire, 50.0f)
+      .withResistance(item::DamageType::Physical, kDragonPhysicalResistance)
+      .withResistance(item::DamageType::Fire, kDragonFireResistance)
       .build();
 
   auto raw = readFile(dataPath("expected_armor_item.json"));
@@ -564,82 +644,86 @@ TEST_F(ArmorItemTest, ToJson_MatchesExpectedFile)
 // =============================================================================
 TEST_F(ArmorItemTest, FromJson_RoundTrip)
 {
-  const auto j = item_.toJson();
-  auto restored = ArmorItemBuilder::fromJson(j);
+  const auto& item = getTestItem();
+  const auto result = item.toJson();
+  auto restored = ArmorItemBuilder::fromJson(result);
   ASSERT_TRUE(restored.has_value());
-  EXPECT_TRUE(restored->isValid());
+  EXPECT_TRUE(restored.value().isValid());
   // Core fields match
-  EXPECT_EQ(restored->getName(), item_.getName());
-  EXPECT_EQ(restored->getDescription(), item_.getDescription());
-  EXPECT_FLOAT_EQ(restored->getWeight(), item_.getWeight());
-  EXPECT_EQ(restored->getRarity(), item_.getRarity());
-  EXPECT_EQ(restored->getType(), item_.getType());
-  EXPECT_EQ(restored->getStatus(), item_.getStatus());
+  EXPECT_EQ(restored.value().getName(), item.getName());
+  EXPECT_EQ(restored.value().getDescription(), item.getDescription());
+  EXPECT_FLOAT_EQ(restored.value().getWeight(), item.getWeight());
+  EXPECT_EQ(restored.value().getRarity(), item.getRarity());
+  EXPECT_EQ(restored.value().getType(), item.getType());
+  EXPECT_EQ(restored.value().getStatus(), item.getStatus());
   // Resistance matches
-  const auto& origRes = item_.getDamageResistance();
-  const auto& restoredRes = restored->getDamageResistance();
+  const auto& origRes = item.getDamageResistance();
+  const auto& restoredRes = restored.value().getDamageResistance();
   ASSERT_EQ(restoredRes.size(), origRes.size());
   for (const auto& [type, amount] : origRes)
   {
-    auto it = restoredRes.find(type);
-    ASSERT_NE(it, restoredRes.end());
-    EXPECT_FLOAT_EQ(it->second, amount);
+    auto resistanceIt = restoredRes.find(type);
+    ASSERT_NE(resistanceIt, restoredRes.end());
+    EXPECT_FLOAT_EQ(resistanceIt->second, amount);
   }
   // UUIDs differ (fromJson always creates a new UUID)
-  EXPECT_NE(restored->getUUID(), item_.getUUID());
+  EXPECT_NE(restored.value().getUUID(), item.getUUID());
 }
 
 TEST_F(ArmorItemTest, FromJson_MissingRequiredField)
 {
-  json j = item_.toJson();
-  j.erase("name");
-  EXPECT_FALSE(ArmorItemBuilder::fromJson(j).has_value());
+  json jsonData = getTestItem().toJson();
+  jsonData.erase("name");
+  EXPECT_FALSE(ArmorItemBuilder::fromJson(jsonData).has_value());
 }
 
 TEST_F(ArmorItemTest, FromJson_MissingDamageResistance)
 {
-  json j = item_.toJson();
-  j.erase("damage_resistance");
-  EXPECT_FALSE(ArmorItemBuilder::fromJson(j).has_value());
+  json jsonData = getTestItem().toJson();
+  jsonData.erase("damage_resistance");
+  EXPECT_FALSE(ArmorItemBuilder::fromJson(jsonData).has_value());
 }
 
 TEST_F(ArmorItemTest, FromJson_InvalidRarity)
 {
-  json j = item_.toJson();
-  j["rarity"] = "Nonexistent";
-  EXPECT_FALSE(ArmorItemBuilder::fromJson(j).has_value());
+  json jsonData = getTestItem().toJson();
+  jsonData["rarity"] = "Nonexistent";
+  EXPECT_FALSE(ArmorItemBuilder::fromJson(jsonData).has_value());
 }
 
 TEST_F(ArmorItemTest, FromJson_InvalidResistanceType)
 {
-  json j = item_.toJson();
-  j["damage_resistance"] = {{"Nonexistent", 5.0}};
-  auto result = ArmorItemBuilder::fromJson(j);
+  json jsonData = getTestItem().toJson();
+  jsonData["damage_resistance"] = {{"Nonexistent", kFireResistance}};
+  auto result = ArmorItemBuilder::fromJson(jsonData);
   ASSERT_TRUE(result.has_value());
   // Unknown resistance types are silently ignored
-  EXPECT_TRUE(result->getDamageResistance().empty());
+  EXPECT_TRUE(result.value().getDamageResistance().empty());
 }
 
 TEST_F(ArmorItemTest, FromJson_NonNumericResistance)
 {
-  json j = item_.toJson();
-  j["damage_resistance"] = {{"Physical", "five"}};
-  auto result = ArmorItemBuilder::fromJson(j);
+  json jsonData = getTestItem().toJson();
+  jsonData["damage_resistance"] = {{"Physical", "five"}};
+  auto result = ArmorItemBuilder::fromJson(jsonData);
   ASSERT_TRUE(result.has_value());
   // Non-numeric resistance values are silently ignored
-  EXPECT_TRUE(result->getDamageResistance().empty());
+  EXPECT_TRUE(result.value().getDamageResistance().empty());
 }
 
 TEST_F(ArmorItemTest, FromJson_ResistanceCaseInsensitive)
 {
-  json j = item_.toJson();
-  j["damage_resistance"] = {{"physical", 15.0}, {"FIRE", 5.0}};
-  auto result = ArmorItemBuilder::fromJson(j);
+  json jsonData = getTestItem().toJson();
+  jsonData["damage_resistance"] = {{"physical", kPhysicalResistance},
+                                   {"FIRE", kFireResistance}};
+  auto result = ArmorItemBuilder::fromJson(jsonData);
   ASSERT_TRUE(result.has_value());
-  EXPECT_FLOAT_EQ(result->getDamageResistance().at(item::DamageType::Physical),
-                  15.0f);
-  EXPECT_FLOAT_EQ(result->getDamageResistance().at(item::DamageType::Fire),
-                  5.0f);
+  EXPECT_FLOAT_EQ(
+    result.value().getDamageResistance().at(item::DamageType::Physical),
+    kPhysicalResistance);
+  EXPECT_FLOAT_EQ(
+    result.value().getDamageResistance().at(item::DamageType::Fire),
+    kFireResistance);
 }
 
 TEST_F(ArmorItemTest, FromJson_FileNotFound)
@@ -655,5 +739,8 @@ TEST_F(ArmorItemTest, FromJson_InvalidSyntax)
                  std::filesystem::path{dataPath("invalid_syntax.json")})
                  .has_value());
 }
+
+// NOLINTEND(modernize-use-trailing-return-type,
+//           readability-function-cognitive-complexity)
 
 } // namespace
