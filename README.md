@@ -143,6 +143,44 @@ cmake -B build -S . -DBUILD_TESTS=OFF
 
 ---
 
+## Static Analysis (clang-tidy)
+
+The project ships a `.clang-tidy` configuration at the repo root with a
+balanced check set: `bugprone-*`, `modernize-*`, `readability-*`,
+`performance-*`, `portability-*`, `misc-*` and `clang-analyzer-*`.
+Clang-tidy is **opt-in**: normal builds never run it.
+
+### Prerequisites
+
+- **clang-tidy** on your `PATH`. On Windows you can get it either via the
+  Visual Studio Installer (component **"C++ Clang tools for Windows"**) or
+  with `winget install LLVM.LLVM`. If it is missing, configuring a
+  `*-tidy` preset fails with instructions.
+
+### Running clang-tidy
+
+```bash
+# Configure the tidy preset (inherits windows-debug and turns the checks on)
+cmake --preset windows-tidy          # also linux-tidy / macos-tidy
+
+# Build — clang-tidy runs on every source/header of every target
+cmake --build --preset build-windows-tidy
+```
+
+### Policy
+
+- **Any finding fails the build** (`-warnings-as-errors=*`). Tidy builds are
+  expected to end clean.
+- The check set and its denylist (with rationale) live in `.clang-tidy` at
+  the repo root. If a check proves genuinely wrong for a specific line, you
+  may silence it with `// NOLINT(check-name)` **plus a written
+  justification comment** — never blanket-suppress a whole file or check
+  without updating the `.clang-tidy` rationale first.
+- Third-party headers (conan / FTXUI / nlohmann_json / GoogleTest) are never
+  diagnosed.
+
+---
+
 ## Customizing for your machine
 
 If the hardcoded MSVC paths in `CMakePresets.json` don't match your system, create a **`CMakeUserPresets.json`** file in the project root. This file is gitignored and lets you override settings without modifying the tracked preset file.

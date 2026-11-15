@@ -1,0 +1,26 @@
+---
+# clang-tidy configuration for dsvh (Random Item Generator).
+#
+# Balanced check set: bug-prone code, modern C++ usage, readability,
+# performance, portability, misc, and the Clang Static Analyzer.
+#
+# Any finding fails the build: the CMake integration passes
+# -warnings-as-errors=* on the command line.
+Checks: >
+  bugprone-*,
+  modernize-*,
+  readability-*,
+  performance-*,
+  portability-*,
+  misc-*,
+  clang-analyzer-*
+
+# Only diagnose project headers; conan/FTXUI/nlohmann_json/GTest headers
+# are third-party and never diagnosed.
+HeaderFilterRegex: 'src/.*'
+SystemHeaders: false
+
+# House style: default member initializers use assignment (= value).
+CheckOptions:
+  - key: modernize-use-default-member-init.UseAssignment
+    value: 'true'

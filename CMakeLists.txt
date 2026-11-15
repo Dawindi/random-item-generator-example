@@ -125,12 +125,49 @@ if(BUILD_TESTS)
     enable_testing()
 endif()
 
-# 6. Add Subdirectories
+# 6. Clang-tidy (opt-in via the *-tidy presets)
+# When enabled, every C++ target is checked during compilation and any
+# finding fails the build (-warnings-as-errors=*). Normal presets leave
+# this OFF, so day-to-day builds are unaffected.
+option(ENABLE_CLANG_TIDY "Run clang-tidy on every target during compilation" OFF)
+
+if(ENABLE_CLANG_TIDY)
+    find_program(CLANG_TIDY_EXECUTABLE NAMES clang-tidy)
+    if(NOT CLANG_TIDY_EXECUTABLE)
+        message(FATAL_ERROR
+            "\n=========================================================================\n"
+            "ERROR: ENABLE_CLANG_TIDY is ON but clang-tidy was not found on PATH.\n\n"
+            "Please install it either via the Visual Studio Installer (component:\n"
+            "'C++ Clang tools for Windows') or with 'winget install LLVM.LLVM',\n"
+            "then make sure the directory containing clang-tidy.exe is on PATH.\n"
+            "=========================================================================\n"
+        )
+    endif()
+
+    # clang-tidy runs in place of the compiler driver; CMake itself prepends
+    # --extra-arg-before=--driver-mode=cl under MSVC so cl.exe-style compile
+    # flags are parsed correctly. Adding our own '--' separator or
+    # --driver-mode here would corrupt the generated invocation.
+    #
+    # clang-tidy in MSVC driver mode does not honour /EHsc, so try/catch
+    # blocks would be parsed with exceptions disabled. -fcxx-exceptions
+    # re-enables them for the analysis only (the real compile is untouched).
+    set(CMAKE_CXX_CLANG_TIDY
+        "${CLANG_TIDY_EXECUTABLE}"
+        "--config-file=${CMAKE_SOURCE_DIR}/.clang-tidy"
+        "--extra-arg=-fcxx-exceptions"
+        "-warnings-as-errors=*"
+    )
+
+    message(STATUS "clang-tidy enabled: ${CLANG_TIDY_EXECUTABLE}")
+endif()
+
+# 7. Add Subdirectories
 # We add them in order of dependency: Core -> UI
 add_subdirectory(src/core)
 add_subdirectory(src/ui)
 
-# 7. Main executable
+# 8. Main executable
 add_executable(dsvh src/main.cc)
 
 target_link_libraries(dsvh
