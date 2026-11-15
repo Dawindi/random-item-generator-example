@@ -11,9 +11,9 @@
 
 ArmorItem::ArmorItem() = default;
 
-auto ArmorItem::toJson() const -> json
+auto ArmorItem::toJsonPayload() const -> json
 {
-  auto result = BaseItem::toJson();
+  auto result = BaseItem::toJsonPayload();
   if (!damageResistance_.empty())
   {
     auto resistanceJson = json::object();

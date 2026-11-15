@@ -60,10 +60,11 @@ class ItemBuilder
   /// the builder is left in a moved-from state and should not be reused.
   BaseItem build();
 
-  /// Creates a BaseItem from a JSON object. Returns std::nullopt if required
-  /// fields are missing or values are invalid. The item receives a new UUID;
-  /// any "uuid" field in the JSON is ignored. The "owner" field is also
-  /// ignored (UUIDs cannot be constructed from strings).
+  /// Creates a BaseItem from a signed envelope (as produced by toJson()).
+  /// Returns std::nullopt if the envelope is missing, its hash does not match
+  /// the payload, required fields are missing or invalid, or the "uuid" field
+  /// is absent or malformed. The deserialized item keeps the serialized UUID.
+  /// The optional "owner" field is restored when present.
   static std::optional<BaseItem> fromJson(const nlohmann::json& data);
 
   /// Creates a BaseItem from a JSON file at the given path. Returns

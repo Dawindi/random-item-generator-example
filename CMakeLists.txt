@@ -115,6 +115,7 @@ endif()
 # 4. Dependencies
 find_package(ftxui REQUIRED)
 find_package(nlohmann_json REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 # 5. Build configuration
 # (BUILD_TESTS must be defined before subdirectories so test targets

@@ -42,6 +42,14 @@ class BaseItem : public InterfaceItem
   protected:
   BaseItem();
 
+  /// Serializes the item's fields into a flat JSON object. The public
+  /// toJson() wraps this payload in a signed envelope.
+  virtual json toJsonPayload() const;
+
+  /// Replaces the item's UUID. Used only by deserialization to restore the
+  /// serialized UUID; not part of the public interface.
+  void setUUID(UUID uuid);
+
   void setName(const std::string& name) final override;
   void setDescription(const std::string& description) final override;
   void setWeight(float weight) final override;

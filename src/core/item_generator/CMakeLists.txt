@@ -4,6 +4,8 @@ add_library(item_generator STATIC
     interface_item.h
     item_builder.cc
     item_builder.h
+    item_serialization.cc
+    item_serialization.h
     weapon_item.cc
     weapon_item.h
     weapon_item_builder.cc
@@ -24,6 +26,7 @@ target_link_libraries(item_generator
     PUBLIC
         uuid::uuid
         nlohmann_json::nlohmann_json
+        OpenSSL::Crypto
         item_data_types::item_data_types
         item_preset::item_preset
 )

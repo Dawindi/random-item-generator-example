@@ -11,6 +11,7 @@
 #include "item_data_types/item_rarity.h"
 #include "item_data_types/item_status.h"
 #include "item_data_types/item_type.h"
+#include "item_serialization.h"
 #include "nlohmann/json_fwd.hpp"
 #include "uuid.h"
 #include "weapon_item.h"
@@ -496,7 +497,9 @@ TEST_F(WeaponItemTest, IsEqual_EquivalentButDifferentUUID)
 TEST_F(WeaponItemTest, ToJson_WithDamage)
 {
   const auto& testWeaponItem = geTesttWeaponItem();
-  const auto result = testWeaponItem.toJson();
+  const auto envelope = testWeaponItem.toJson();
+  EXPECT_TRUE(item::verifyItem(envelope).has_value());
+  const auto result = envelope["payload"];
   EXPECT_EQ(result["uuid"], testWeaponItem.getUUID().toString());
   EXPECT_EQ(result["name"], "Iron Sword");
   EXPECT_EQ(result["description"], "A sturdy iron sword.");
@@ -520,7 +523,9 @@ TEST_F(WeaponItemTest, ToJson_WithoutDamage)
                     .withType(item::Type::OneHandedPrimary)
                     .withStatus(item::Status::NOT_OWNDED)
                     .build();
-  const auto result = noDamage.toJson();
+  const auto envelope = noDamage.toJson();
+  EXPECT_TRUE(item::verifyItem(envelope).has_value());
+  const auto result = envelope["payload"];
   EXPECT_FALSE(result.contains("damage"));
 }
 
@@ -542,9 +547,17 @@ TEST_F(WeaponItemTest, ToJson_WithOwner)
       .withOwner(std::move(owner))
       .build();
 
-  const auto result = itemWithOwner.toJson();
+  const auto envelope = itemWithOwner.toJson();
+  EXPECT_TRUE(item::verifyItem(envelope).has_value());
+  const auto result = envelope["payload"];
   EXPECT_TRUE(result.contains("owner"));
   EXPECT_EQ(result["owner"], ownerStr);
+
+  // The owner round-trips through deserialization.
+  auto restored = WeaponItemBuilder::fromJson(envelope);
+  ASSERT_TRUE(restored.has_value());
+  ASSERT_TRUE(restored.value().getOwner().has_value());
+  EXPECT_EQ(restored.value().getOwner().value().toString(), ownerStr);
 }
 
 // =============================================================================
@@ -566,21 +579,23 @@ TEST_F(WeaponItemTest, ToJson_MatchesExpectedFile)
   auto raw = readFile(dataPath("expected_weapon_item.json"));
   replaceAll(raw, "00000000-0000-0000-0000-000000000000",
              sword.getUUID().toString());
-  auto expectedJson = json::parse(raw);
+  auto expectedPayload = json::parse(raw);
 
-  auto actualJson = sword.toJson();
+  auto envelope = sword.toJson();
+  ASSERT_TRUE(item::verifyItem(envelope).has_value());
+  auto actualPayload = envelope["payload"];
 
   // Float comparison: verify rangeInMeters within tolerance.
-  ASSERT_TRUE(actualJson.contains("rangeInMeters"));
-  ASSERT_TRUE(expectedJson.contains("rangeInMeters"));
-  EXPECT_NEAR(actualJson["rangeInMeters"].get<float>(),
-              expectedJson["rangeInMeters"].get<float>(), 1e-5F);
+  ASSERT_TRUE(actualPayload.contains("rangeInMeters"));
+  ASSERT_TRUE(expectedPayload.contains("rangeInMeters"));
+  EXPECT_NEAR(actualPayload["rangeInMeters"].get<float>(),
+              expectedPayload["rangeInMeters"].get<float>(), 1e-5F);
 
   // Normalise range so structural comparison succeeds.
-  actualJson["rangeInMeters"] = 0;
-  expectedJson["rangeInMeters"] = 0;
+  actualPayload["rangeInMeters"] = 0;
+  expectedPayload["rangeInMeters"] = 0;
 
-  EXPECT_EQ(actualJson, expectedJson);
+  EXPECT_EQ(actualPayload, expectedPayload);
 }
 
 // =============================================================================
@@ -605,29 +620,31 @@ TEST_F(WeaponItemTest, FromJson_RoundTrip)
   // Range matches
   EXPECT_FLOAT_EQ(restored.value().getRangeInMeters(),
                   testWeaponItem.getRangeInMeters());
-  // UUIDs differ (fromJson always creates a new UUID)
-  EXPECT_NE(restored.value().getUUID(), testWeaponItem.getUUID());
+  // UUID is preserved across the round trip.
+  EXPECT_EQ(restored.value().getUUID(), testWeaponItem.getUUID());
 }
 
 TEST_F(WeaponItemTest, FromJson_MissingRequiredField)
 {
-  json jsonData = geTesttWeaponItem().toJson();
-  jsonData.erase("name");
-  EXPECT_FALSE(WeaponItemBuilder::fromJson(jsonData).has_value());
+  json payload = geTesttWeaponItem().toJson()["payload"];
+  payload.erase("name");
+  EXPECT_FALSE(
+    WeaponItemBuilder::fromJson(item::signItem(payload)).has_value());
 }
 
 TEST_F(WeaponItemTest, FromJson_InvalidRarity)
 {
-  json jsonData = geTesttWeaponItem().toJson();
-  jsonData["rarity"] = "Nonexistent";
-  EXPECT_FALSE(WeaponItemBuilder::fromJson(jsonData).has_value());
+  json payload = geTesttWeaponItem().toJson()["payload"];
+  payload["rarity"] = "Nonexistent";
+  EXPECT_FALSE(
+    WeaponItemBuilder::fromJson(item::signItem(payload)).has_value());
 }
 
 TEST_F(WeaponItemTest, FromJson_InvalidDamageType)
 {
-  json jsonData = geTesttWeaponItem().toJson();
-  jsonData["damage"] = {{"Nonexistent", kPhysicalDamage}};
-  auto result = WeaponItemBuilder::fromJson(jsonData);
+  json payload = geTesttWeaponItem().toJson()["payload"];
+  payload["damage"] = {{"Nonexistent", kPhysicalDamage}};
+  auto result = WeaponItemBuilder::fromJson(item::signItem(payload));
   ASSERT_TRUE(result.has_value());
   // Unknown damage types are silently ignored
   EXPECT_TRUE(result.value().getDamage().empty());
@@ -635,9 +652,9 @@ TEST_F(WeaponItemTest, FromJson_InvalidDamageType)
 
 TEST_F(WeaponItemTest, FromJson_NonIntegerDamage)
 {
-  json jsonData = geTesttWeaponItem().toJson();
-  jsonData["damage"] = {{"Physical", kNonIntegerDamage}};
-  auto result = WeaponItemBuilder::fromJson(jsonData);
+  json payload = geTesttWeaponItem().toJson()["payload"];
+  payload["damage"] = {{"Physical", kNonIntegerDamage}};
+  auto result = WeaponItemBuilder::fromJson(item::signItem(payload));
   ASSERT_TRUE(result.has_value());
   // Non-integer damage values are silently ignored
   EXPECT_TRUE(result.value().getDamage().empty());
@@ -645,9 +662,9 @@ TEST_F(WeaponItemTest, FromJson_NonIntegerDamage)
 
 TEST_F(WeaponItemTest, FromJson_DamageCaseInsensitive)
 {
-  json jsonData = geTesttWeaponItem().toJson();
-  jsonData["damage"] = {{"physical", kPhysicalDamage}, {"FIRE", kFireDamage}};
-  auto result = WeaponItemBuilder::fromJson(jsonData);
+  json payload = geTesttWeaponItem().toJson()["payload"];
+  payload["damage"] = {{"physical", kPhysicalDamage}, {"FIRE", kFireDamage}};
+  auto result = WeaponItemBuilder::fromJson(item::signItem(payload));
   ASSERT_TRUE(result.has_value());
   EXPECT_EQ(result.value().getDamage().at(item::DamageType::Physical),
             kPhysicalDamage);

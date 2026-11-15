@@ -2,7 +2,9 @@
 
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <string>
+#include <string_view>
 
 class UUID
 {
@@ -27,6 +29,11 @@ class UUID
   /// Returns the UUID as a string (e.g.
   /// "550e8400-e29b-41d4-a716-446655440000").
   std::string toString() const;
+
+  /// Parses a canonical UUID string ("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx").
+  /// Returns std::nullopt when the string is malformed or contains
+  /// non-hexadecimal digits.
+  static std::optional<UUID> fromString(std::string_view text);
 
   private:
   static constexpr uint8_t kUUIDSize_ = 16;

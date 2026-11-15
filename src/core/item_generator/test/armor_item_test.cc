@@ -13,6 +13,7 @@
 #include "item_data_types/item_rarity.h"
 #include "item_data_types/item_status.h"
 #include "item_data_types/item_type.h"
+#include "item_serialization.h"
 #include "nlohmann/json_fwd.hpp"
 #include "uuid.h"
 
@@ -561,7 +562,9 @@ TEST_F(ArmorItemTest, IsEqual_EquivalentButDifferentUUID)
 TEST_F(ArmorItemTest, ToJson_WithResistance)
 {
   const auto& item = getTestItem();
-  const auto result = item.toJson();
+  const auto envelope = item.toJson();
+  EXPECT_TRUE(item::verifyItem(envelope).has_value());
+  const auto result = envelope["payload"];
   EXPECT_EQ(result["uuid"], item.getUUID().toString());
   EXPECT_EQ(result["name"], "Iron Helmet");
   EXPECT_EQ(result["description"], "A sturdy iron helmet.");
@@ -584,7 +587,9 @@ TEST_F(ArmorItemTest, ToJson_WithoutResistance)
                  .withType(item::Type::HeadGear)
                  .withStatus(item::Status::NOT_OWNDED)
                  .build();
-  const auto result = noRes.toJson();
+  const auto envelope = noRes.toJson();
+  EXPECT_TRUE(item::verifyItem(envelope).has_value());
+  const auto result = envelope["payload"];
   EXPECT_FALSE(result.contains("damage_resistance"));
 }
 
@@ -606,9 +611,17 @@ TEST_F(ArmorItemTest, ToJson_WithOwner)
       .withOwner(std::move(owner))
       .build();
 
-  const auto result = itemWithOwner.toJson();
+  const auto envelope = itemWithOwner.toJson();
+  EXPECT_TRUE(item::verifyItem(envelope).has_value());
+  const auto result = envelope["payload"];
   EXPECT_TRUE(result.contains("owner"));
   EXPECT_EQ(result["owner"], ownerStr);
+
+  // The owner round-trips through deserialization.
+  auto restored = ArmorItemBuilder::fromJson(envelope);
+  ASSERT_TRUE(restored.has_value());
+  ASSERT_TRUE(restored.value().getOwner().has_value());
+  EXPECT_EQ(restored.value().getOwner().value().toString(), ownerStr);
 }
 
 // =============================================================================
@@ -632,11 +645,12 @@ TEST_F(ArmorItemTest, ToJson_MatchesExpectedFile)
   auto raw = readFile(dataPath("expected_armor_item.json"));
   replaceAll(raw, "00000000-0000-0000-0000-000000000000",
              chestplate.getUUID().toString());
-  auto expectedJson = json::parse(raw);
+  auto expectedPayload = json::parse(raw);
 
-  auto actualJson = chestplate.toJson();
+  auto envelope = chestplate.toJson();
+  ASSERT_TRUE(item::verifyItem(envelope).has_value());
 
-  EXPECT_EQ(actualJson, expectedJson);
+  EXPECT_EQ(envelope["payload"], expectedPayload);
 }
 
 // =============================================================================
@@ -666,36 +680,36 @@ TEST_F(ArmorItemTest, FromJson_RoundTrip)
     ASSERT_NE(resistanceIt, restoredRes.end());
     EXPECT_FLOAT_EQ(resistanceIt->second, amount);
   }
-  // UUIDs differ (fromJson always creates a new UUID)
-  EXPECT_NE(restored.value().getUUID(), item.getUUID());
+  // UUID is preserved across the round trip.
+  EXPECT_EQ(restored.value().getUUID(), item.getUUID());
 }
 
 TEST_F(ArmorItemTest, FromJson_MissingRequiredField)
 {
-  json jsonData = getTestItem().toJson();
-  jsonData.erase("name");
-  EXPECT_FALSE(ArmorItemBuilder::fromJson(jsonData).has_value());
+  json payload = getTestItem().toJson()["payload"];
+  payload.erase("name");
+  EXPECT_FALSE(ArmorItemBuilder::fromJson(item::signItem(payload)).has_value());
 }
 
 TEST_F(ArmorItemTest, FromJson_MissingDamageResistance)
 {
-  json jsonData = getTestItem().toJson();
-  jsonData.erase("damage_resistance");
-  EXPECT_FALSE(ArmorItemBuilder::fromJson(jsonData).has_value());
+  json payload = getTestItem().toJson()["payload"];
+  payload.erase("damage_resistance");
+  EXPECT_FALSE(ArmorItemBuilder::fromJson(item::signItem(payload)).has_value());
 }
 
 TEST_F(ArmorItemTest, FromJson_InvalidRarity)
 {
-  json jsonData = getTestItem().toJson();
-  jsonData["rarity"] = "Nonexistent";
-  EXPECT_FALSE(ArmorItemBuilder::fromJson(jsonData).has_value());
+  json payload = getTestItem().toJson()["payload"];
+  payload["rarity"] = "Nonexistent";
+  EXPECT_FALSE(ArmorItemBuilder::fromJson(item::signItem(payload)).has_value());
 }
 
 TEST_F(ArmorItemTest, FromJson_InvalidResistanceType)
 {
-  json jsonData = getTestItem().toJson();
-  jsonData["damage_resistance"] = {{"Nonexistent", kFireResistance}};
-  auto result = ArmorItemBuilder::fromJson(jsonData);
+  json payload = getTestItem().toJson()["payload"];
+  payload["damage_resistance"] = {{"Nonexistent", kFireResistance}};
+  auto result = ArmorItemBuilder::fromJson(item::signItem(payload));
   ASSERT_TRUE(result.has_value());
   // Unknown resistance types are silently ignored
   EXPECT_TRUE(result.value().getDamageResistance().empty());
@@ -703,9 +717,9 @@ TEST_F(ArmorItemTest, FromJson_InvalidResistanceType)
 
 TEST_F(ArmorItemTest, FromJson_NonNumericResistance)
 {
-  json jsonData = getTestItem().toJson();
-  jsonData["damage_resistance"] = {{"Physical", "five"}};
-  auto result = ArmorItemBuilder::fromJson(jsonData);
+  json payload = getTestItem().toJson()["payload"];
+  payload["damage_resistance"] = {{"Physical", "five"}};
+  auto result = ArmorItemBuilder::fromJson(item::signItem(payload));
   ASSERT_TRUE(result.has_value());
   // Non-numeric resistance values are silently ignored
   EXPECT_TRUE(result.value().getDamageResistance().empty());
@@ -713,10 +727,10 @@ TEST_F(ArmorItemTest, FromJson_NonNumericResistance)
 
 TEST_F(ArmorItemTest, FromJson_ResistanceCaseInsensitive)
 {
-  json jsonData = getTestItem().toJson();
-  jsonData["damage_resistance"] = {{"physical", kPhysicalResistance},
-                                   {"FIRE", kFireResistance}};
-  auto result = ArmorItemBuilder::fromJson(jsonData);
+  json payload = getTestItem().toJson()["payload"];
+  payload["damage_resistance"] = {{"physical", kPhysicalResistance},
+                                  {"FIRE", kFireResistance}};
+  auto result = ArmorItemBuilder::fromJson(item::signItem(payload));
   ASSERT_TRUE(result.has_value());
   EXPECT_FLOAT_EQ(
     result.value().getDamageResistance().at(item::DamageType::Physical),

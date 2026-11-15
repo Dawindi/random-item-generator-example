@@ -1,6 +1,7 @@
 #include "base_item.h"
 #include "interface_item.h"
 #include "item_rarity.h"
+#include "item_serialization.h"
 #include "item_status.h"
 #include "item_type.h"
 
@@ -12,6 +13,11 @@
 BaseItem::BaseItem() = default;
 
 auto BaseItem::toJson() const -> json
+{
+  return item::signItem(toJsonPayload());
+}
+
+auto BaseItem::toJsonPayload() const -> json
 {
   auto result = json::object();
   result["uuid"] = uuid_.toString();
@@ -27,6 +33,8 @@ auto BaseItem::toJson() const -> json
   }
   return result;
 }
+
+void BaseItem::setUUID(UUID uuid) { uuid_ = std::move(uuid); }
 
 auto BaseItem::getUUID() const -> const UUID& { return uuid_; }
 

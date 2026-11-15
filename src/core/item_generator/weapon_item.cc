@@ -9,9 +9,9 @@
 
 WeaponItem::WeaponItem() = default;
 
-auto WeaponItem::toJson() const -> json
+auto WeaponItem::toJsonPayload() const -> json
 {
-  auto result = BaseItem::toJson();
+  auto result = BaseItem::toJsonPayload();
   if (!damage_.empty())
   {
     auto damageJson = json::object();

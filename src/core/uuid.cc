@@ -1,12 +1,15 @@
 #include "uuid.h"
 
+#include <array>
 #include <cstdint>
 #include <cstring>
 #include <iomanip>
 #include <ios>
+#include <optional>
 #include <random>
 #include <sstream>
 #include <string>
+#include <string_view>
 
 namespace
 {
@@ -21,6 +24,29 @@ constexpr std::size_t kFirstDashIndex = 4;
 constexpr std::size_t kSecondDashIndex = 6;
 constexpr std::size_t kThirdDashIndex = 8;
 constexpr std::size_t kFourthDashIndex = 10;
+
+constexpr std::size_t kUuidStringLength = 36;
+constexpr std::array<std::size_t, 5> kUuidGroupSizes = {8, 4, 4, 4, 12};
+constexpr int kHexDigitBase = 10;
+
+/// Returns the value of a hex digit (0-15), or -1 when the character is not a
+/// hexadecimal digit.
+auto hexValue(char character) -> int
+{
+  if (character >= '0' && character <= '9')
+  {
+    return character - '0';
+  }
+  if (character >= 'a' && character <= 'f')
+  {
+    return character - 'a' + kHexDigitBase;
+  }
+  if (character >= 'A' && character <= 'F')
+  {
+    return character - 'A' + kHexDigitBase;
+  }
+  return -1;
+}
 } // namespace
 
 UUID::UUID()
@@ -83,4 +109,45 @@ auto UUID::toString() const -> std::string
   }
 
   return oss.str();
+}
+
+auto UUID::fromString(std::string_view text) -> std::optional<UUID>
+{
+  if (text.size() != kUuidStringLength)
+  {
+    return std::nullopt;
+  }
+
+  UUID uuid;
+  std::size_t position = 0;
+  std::size_t byteIndex = 0;
+
+  for (std::size_t group = 0; group < kUuidGroupSizes.size(); ++group)
+  {
+    if (group > 0)
+    {
+      if (text[position] != '-')
+      {
+        return std::nullopt;
+      }
+      ++position;
+    }
+
+    const std::size_t groupSize = kUuidGroupSizes[group];
+    for (std::size_t i = 0; i < groupSize; i += 2)
+    {
+      const int high = hexValue(text[position]);
+      const int low = hexValue(text[position + 1]);
+      if (high < 0 || low < 0)
+      {
+        return std::nullopt;
+      }
+      uuid.uuid_[byteIndex] =
+        static_cast<std::uint8_t>((high << 4) | low);
+      ++byteIndex;
+      position += 2;
+    }
+  }
+
+  return uuid;
 }

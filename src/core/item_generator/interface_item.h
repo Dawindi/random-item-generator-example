@@ -20,12 +20,14 @@ class InterfaceItem
   virtual ~InterfaceItem() = default;
 
   // - Conversions -
-  // toJson returns a JSON representation of the item.
+  // toJson returns a signed envelope containing the item's JSON payload and
+  // a SHA-256 hash of that payload: { "payload": ..., "hash": ... }.
   virtual json toJson() const = 0;
 
   // - Getters -
   // UUID returns the item's unique identifier as a const reference to avoid
-  // modification. There is no setter for UUID — each UUID should be unique.
+  // modification. There is no public setter for UUID — each UUID should be
+  // unique; deserialization restores the serialized UUID internally.
   virtual const UUID& getUUID() const = 0;
 
   // name returns the item's name as a const reference to avoid modification.

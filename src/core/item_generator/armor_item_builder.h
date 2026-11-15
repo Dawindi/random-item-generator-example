@@ -67,10 +67,11 @@ class ArmorItemBuilder
   /// the builder is left in a moved-from state and should not be reused.
   ArmorItem build();
 
-  /// Creates an ArmorItem from a JSON object. Returns std::nullopt if
-  /// required fields are missing or values are invalid. The item receives a
-  /// new UUID; any "uuid" field in the JSON is ignored. The "owner" field is
-  /// also ignored (UUIDs cannot be constructed from strings). An optional
+  /// Creates an ArmorItem from a signed envelope (as produced by toJson()).
+  /// Returns std::nullopt if the envelope is missing, its hash does not match
+  /// the payload, required fields are missing or invalid, or the "uuid" field
+  /// is absent or malformed. The deserialized item keeps the serialized UUID.
+  /// The optional "owner" field is restored when present. An optional
   /// "damage_resistance" object maps damage-type strings to float amounts.
   static std::optional<ArmorItem> fromJson(const nlohmann::json& data);
 

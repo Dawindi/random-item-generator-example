@@ -1,7 +1,11 @@
 {
-  "description": "A sturdy iron sword.",
-  "weight": 3.5,
-  "rarity": "Common",
-  "type": "OneHandedPrimary",
-  "status": "OWNED"
+  "payload": {
+    "uuid": "123e4567-e89b-12d3-a456-426614174000",
+    "description": "A sturdy iron sword.",
+    "weight": 3.5,
+    "rarity": "Common",
+    "type": "OneHandedPrimary",
+    "status": "OWNED"
+  },
+  "hash": "5760f32cd19dacef239cf0186b99203d8ff14b09b7c01680499c1265c34d461e"
 }

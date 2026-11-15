@@ -12,6 +12,7 @@
 #include "item_data_types/item_rarity.h"
 #include "item_data_types/item_status.h"
 #include "item_data_types/item_type.h"
+#include "item_serialization.h"
 #include "nlohmann/json_fwd.hpp"
 
 using nlohmann::json;
@@ -32,6 +33,9 @@ constexpr int kWrongTypeValue = 42;
 constexpr std::size_t kRarityCaseCount = 5;
 constexpr std::size_t kTypeCaseCount = 11;
 constexpr std::size_t kStatusCaseCount = 3;
+
+const std::string kTestUuid{"123e4567-e89b-12d3-a456-426614174000"};
+const std::string kAlternateUuid{"11111111-1111-1111-1111-111111111111"};
 
 /// Helper: read the full contents of a file as a string.
 auto readFile(const std::string& path) -> std::string
@@ -60,6 +64,7 @@ class ItemBuilderFromJsonTest : public ::testing::Test
   protected:
   void SetUp() override
   {
+    validJson_["uuid"] = kTestUuid;
     validJson_["name"] = "Iron Sword";
     validJson_["description"] = "A sturdy iron sword.";
     validJson_["weight"] = kIronSwordWeight;
@@ -77,7 +82,7 @@ class ItemBuilderFromJsonTest : public ::testing::Test
 // =============================================================================
 TEST_F(ItemBuilderFromJsonTest, FromJsonObject_Success)
 {
-  const auto& item = ItemBuilder::fromJson(getValidJson());
+  const auto item = ItemBuilder::fromJson(item::signItem(getValidJson()));
   ASSERT_TRUE(item.has_value());
 
   EXPECT_EQ(item.value().getName(), "Iron Sword");
@@ -87,43 +92,51 @@ TEST_F(ItemBuilderFromJsonTest, FromJsonObject_Success)
   EXPECT_EQ(item.value().getType(), item::Type::OneHandedPrimary);
   EXPECT_EQ(item.value().getStatus(), item::Status::OWNED);
 
-  // UUID is auto-generated — verify it's non-empty (valid).
-  EXPECT_FALSE(item.value().getUUID().toString().empty());
+  // UUID is restored from the JSON.
+  EXPECT_EQ(item.value().getUUID().toString(), kTestUuid);
+
+  // No owner was serialized, so the deserialized owner stays empty.
+  EXPECT_FALSE(item.value().getOwner().has_value());
 }
 
-TEST_F(ItemBuilderFromJsonTest, FromJsonObject_GeneratesNewUUID)
+TEST_F(ItemBuilderFromJsonTest, FromJsonObject_PreservesUUID)
 {
-  auto firstItem = ItemBuilder::fromJson(getValidJson());
-  auto secondItem = ItemBuilder::fromJson(getValidJson());
+  auto firstItem = ItemBuilder::fromJson(item::signItem(getValidJson()));
+  auto secondItem = ItemBuilder::fromJson(item::signItem(getValidJson()));
   ASSERT_TRUE(firstItem.has_value());
   ASSERT_TRUE(secondItem.has_value());
 
-  // Two items built from the same JSON get different UUIDs.
-  EXPECT_NE(firstItem.value().getUUID().toString(),
+  // Two items deserialized from the same JSON keep the same UUID.
+  EXPECT_EQ(firstItem.value().getUUID().toString(),
             secondItem.value().getUUID().toString());
 }
 
-TEST_F(ItemBuilderFromJsonTest, FromJsonObject_IgnoresUUID)
+TEST_F(ItemBuilderFromJsonTest, FromJsonObject_UsesUUID)
 {
   auto& testJson = getValidJson();
-  testJson["uuid"] = "00000000-0000-0000-0000-000000000000";
-  auto item = ItemBuilder::fromJson(testJson);
+  testJson["uuid"] = kAlternateUuid;
+  auto item = ItemBuilder::fromJson(item::signItem(testJson));
   ASSERT_TRUE(item.has_value());
 
-  // UUID is not the one from JSON.
-  EXPECT_NE(item.value().getUUID().toString(),
-            "00000000-0000-0000-0000-000000000000");
+  EXPECT_EQ(item.value().getUUID().toString(), kAlternateUuid);
 }
 
-TEST_F(ItemBuilderFromJsonTest, FromJsonObject_IgnoresOwner)
+TEST_F(ItemBuilderFromJsonTest, FromJsonObject_PreservesOwner)
 {
   auto& testJson = getValidJson();
-  testJson["owner"] = "11111111-1111-1111-1111-111111111111";
-  auto item = ItemBuilder::fromJson(testJson);
+  testJson["owner"] = kAlternateUuid;
+  auto item = ItemBuilder::fromJson(item::signItem(testJson));
   ASSERT_TRUE(item.has_value());
 
-  // Owner is ignored — should be nullopt.
-  EXPECT_FALSE(item.value().getOwner().has_value());
+  ASSERT_TRUE(item.value().getOwner().has_value());
+  EXPECT_EQ(item.value().getOwner().value().toString(), kAlternateUuid);
+}
+
+TEST_F(ItemBuilderFromJsonTest, FromJsonObject_RejectsInvalidOwner)
+{
+  auto& testJson = getValidJson();
+  testJson["owner"] = "not-a-uuid";
+  EXPECT_FALSE(ItemBuilder::fromJson(item::signItem(testJson)).has_value());
 }
 
 TEST_F(ItemBuilderFromJsonTest, FromJsonObject_IgnoresExtraFields)
@@ -131,7 +144,7 @@ TEST_F(ItemBuilderFromJsonTest, FromJsonObject_IgnoresExtraFields)
   auto& testJson = getValidJson();
   testJson["extra"] = "unexpected";
   testJson["another"] = kWrongTypeValue;
-  auto item = ItemBuilder::fromJson(testJson);
+  auto item = ItemBuilder::fromJson(item::signItem(testJson));
   ASSERT_TRUE(item.has_value());
 
   EXPECT_EQ(item.value().getName(), "Iron Sword");
@@ -152,7 +165,7 @@ TEST_F(ItemBuilderFromJsonTest, FromJsonObject_AllRarityValues)
   for (const auto& [str, expected] : cases)
   {
     testJson["rarity"] = str;
-    auto item = ItemBuilder::fromJson(testJson);
+    auto item = ItemBuilder::fromJson(item::signItem(testJson));
     ASSERT_TRUE(item.has_value()) << "Failed for rarity: " << str;
     EXPECT_EQ(item.value().getRarity(), expected);
   }
@@ -179,7 +192,7 @@ TEST_F(ItemBuilderFromJsonTest, FromJsonObject_AllTypeValues)
   for (const auto& [str, expected] : cases)
   {
     testJson["type"] = str;
-    auto item = ItemBuilder::fromJson(testJson);
+    auto item = ItemBuilder::fromJson(item::signItem(testJson));
     ASSERT_TRUE(item.has_value()) << "Failed for type: " << str;
     EXPECT_EQ(item.value().getType(), expected);
   }
@@ -198,7 +211,7 @@ TEST_F(ItemBuilderFromJsonTest, FromJsonObject_AllStatusValues)
   for (const auto& [str, expected] : cases)
   {
     testJson["status"] = str;
-    auto item = ItemBuilder::fromJson(testJson);
+    auto item = ItemBuilder::fromJson(item::signItem(testJson));
     ASSERT_TRUE(item.has_value()) << "Failed for status: " << str;
     EXPECT_EQ(item.value().getStatus(), expected);
   }
@@ -211,77 +224,77 @@ TEST_F(ItemBuilderFromJsonTest, FromJsonObject_MissingName)
 {
   auto& testJson = getValidJson();
   testJson.erase("name");
-  EXPECT_FALSE(ItemBuilder::fromJson(testJson).has_value());
+  EXPECT_FALSE(ItemBuilder::fromJson(item::signItem(testJson)).has_value());
 }
 
 TEST_F(ItemBuilderFromJsonTest, FromJsonObject_MissingDescription)
 {
   auto& testJson = getValidJson();
   testJson.erase("description");
-  EXPECT_FALSE(ItemBuilder::fromJson(testJson).has_value());
+  EXPECT_FALSE(ItemBuilder::fromJson(item::signItem(testJson)).has_value());
 }
 
 TEST_F(ItemBuilderFromJsonTest, FromJsonObject_MissingWeight)
 {
   auto& testJson = getValidJson();
   testJson.erase("weight");
-  EXPECT_FALSE(ItemBuilder::fromJson(testJson).has_value());
+  EXPECT_FALSE(ItemBuilder::fromJson(item::signItem(testJson)).has_value());
 }
 
 TEST_F(ItemBuilderFromJsonTest, FromJsonObject_MissingRarity)
 {
   auto& testJson = getValidJson();
   testJson.erase("rarity");
-  EXPECT_FALSE(ItemBuilder::fromJson(testJson).has_value());
+  EXPECT_FALSE(ItemBuilder::fromJson(item::signItem(testJson)).has_value());
 }
 
 TEST_F(ItemBuilderFromJsonTest, FromJsonObject_MissingType)
 {
   auto& testJson = getValidJson();
   testJson.erase("type");
-  EXPECT_FALSE(ItemBuilder::fromJson(testJson).has_value());
+  EXPECT_FALSE(ItemBuilder::fromJson(item::signItem(testJson)).has_value());
 }
 
 TEST_F(ItemBuilderFromJsonTest, FromJsonObject_MissingStatus)
 {
   auto& testJson = getValidJson();
   testJson.erase("status");
-  EXPECT_FALSE(ItemBuilder::fromJson(testJson).has_value());
+  EXPECT_FALSE(ItemBuilder::fromJson(item::signItem(testJson)).has_value());
 }
 
 TEST_F(ItemBuilderFromJsonTest, FromJsonObject_WrongTypeForName)
 {
   auto& testJson = getValidJson();
   testJson["name"] = kWrongTypeValue;
-  EXPECT_FALSE(ItemBuilder::fromJson(testJson).has_value());
+  EXPECT_FALSE(ItemBuilder::fromJson(item::signItem(testJson)).has_value());
 }
 
 TEST_F(ItemBuilderFromJsonTest, FromJsonObject_WrongTypeForWeight)
 {
   auto& testJson = getValidJson();
   testJson["weight"] = "not a number";
-  EXPECT_FALSE(ItemBuilder::fromJson(testJson).has_value());
+  EXPECT_FALSE(ItemBuilder::fromJson(item::signItem(testJson)).has_value());
 }
 
 TEST_F(ItemBuilderFromJsonTest, FromJsonObject_InvalidRarityString)
 {
   auto& testJson = getValidJson();
   testJson["rarity"] = "Mythical";
-  EXPECT_FALSE(ItemBuilder::fromJson(testJson).has_value());
+  EXPECT_FALSE(ItemBuilder::fromJson(item::signItem(testJson)).has_value());
 }
 
 TEST_F(ItemBuilderFromJsonTest, FromJsonObject_InvalidTypeString)
 {
   auto& testJson = getValidJson();
   testJson["type"] = "Spaceship";
-  EXPECT_FALSE(ItemBuilder::fromJson(testJson).has_value());
+  EXPECT_FALSE(ItemBuilder::fromJson(item::signItem(testJson)).has_value());
 }
 
 TEST_F(ItemBuilderFromJsonTest, FromJsonObject_InvalidStatusString)
 {
   auto& testJson = getValidJson();
   testJson["status"] = "SOLD";
-  EXPECT_FALSE(ItemBuilder::fromJson(testJson).has_value());
+  EXPECT_FALSE(ItemBuilder::fromJson(item::signItem(testJson)).has_value());
 }
 
 // =============================================================================
@@ -299,6 +312,7 @@ TEST_F(ItemBuilderFromJsonTest, FromJsonFile_Success)
   EXPECT_EQ(item.value().getRarity(), item::Rarity::Common);
   EXPECT_EQ(item.value().getType(), item::Type::OneHandedPrimary);
   EXPECT_EQ(item.value().getStatus(), item::Status::OWNED);
+  EXPECT_EQ(item.value().getUUID().toString(), kTestUuid);
 }
 
 TEST_F(ItemBuilderFromJsonTest, FromJsonFile_FileNotFound)
@@ -327,6 +341,9 @@ TEST_F(ItemBuilderFromJsonTest, FromJsonFile_MissingRequiredField)
 // =============================================================================
 TEST_F(ItemBuilderFromJsonTest, RoundTrip_BuilderToJsonToItem)
 {
+  UUID owner;
+  const auto ownerStr = owner.toString();
+
   // Build an item with the fluent API
   auto original = ItemBuilder()
                     .withName("Excalibur")
@@ -335,6 +352,7 @@ TEST_F(ItemBuilderFromJsonTest, RoundTrip_BuilderToJsonToItem)
                     .withRarity(item::Rarity::Legendary)
                     .withType(item::Type::TwoHandedPrimary)
                     .withStatus(item::Status::EQUIPPED)
+                    .withOwner(std::move(owner))
                     .build();
 
   const auto result = original.toJson();
@@ -350,15 +368,61 @@ TEST_F(ItemBuilderFromJsonTest, RoundTrip_BuilderToJsonToItem)
   EXPECT_EQ(restored.value().getType(), original.getType());
   EXPECT_EQ(restored.value().getStatus(), original.getStatus());
 
-  // UUID differs (new one generated).
-  EXPECT_NE(restored.value().getUUID().toString(),
+  // UUID is preserved across the round trip.
+  EXPECT_EQ(restored.value().getUUID().toString(),
             original.getUUID().toString());
 
-  // Owner is not preserved.
-  EXPECT_FALSE(restored.value().getOwner().has_value());
+  // Owner is preserved across the round trip.
+  ASSERT_TRUE(restored.value().getOwner().has_value());
+  EXPECT_EQ(restored.value().getOwner().value().toString(), ownerStr);
 
   // Cores are equivalent (isEquivalent ignores UUID and owner).
   EXPECT_TRUE(original.isEquivalent(restored.value()));
+}
+
+// =============================================================================
+//  fromJson — integrity verification
+// =============================================================================
+TEST_F(ItemBuilderFromJsonTest, FromJsonObject_RejectsMissingHash)
+{
+  auto envelope = item::signItem(getValidJson());
+  envelope.erase("hash");
+  EXPECT_FALSE(ItemBuilder::fromJson(envelope).has_value());
+}
+
+TEST_F(ItemBuilderFromJsonTest, FromJsonObject_RejectsTamperedPayload)
+{
+  auto envelope = item::signItem(getValidJson());
+  envelope["payload"]["name"] = "Hacked";
+  EXPECT_FALSE(ItemBuilder::fromJson(envelope).has_value());
+}
+
+TEST_F(ItemBuilderFromJsonTest, FromJsonObject_RejectsMissingUuid)
+{
+  auto& testJson = getValidJson();
+  testJson.erase("uuid");
+  EXPECT_FALSE(ItemBuilder::fromJson(item::signItem(testJson)).has_value());
+}
+
+TEST_F(ItemBuilderFromJsonTest, FromJsonObject_RejectsInvalidUuid)
+{
+  auto& testJson = getValidJson();
+  testJson["uuid"] = "not-a-uuid";
+  EXPECT_FALSE(ItemBuilder::fromJson(item::signItem(testJson)).has_value());
+}
+
+TEST_F(ItemBuilderFromJsonTest, SignItemAndVerifyItemRoundTrip)
+{
+  const json payload = getValidJson();
+  const auto envelope = item::signItem(payload);
+  const auto verified = item::verifyItem(envelope);
+  ASSERT_TRUE(verified.has_value());
+  EXPECT_EQ(*verified, payload);
+}
+
+TEST_F(ItemBuilderFromJsonTest, VerifyItemRejectsNonObject)
+{
+  EXPECT_FALSE(item::verifyItem(json::array()).has_value());
 }
 
 // NOLINTEND(modernize-use-trailing-return-type,

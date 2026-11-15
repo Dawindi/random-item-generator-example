@@ -22,8 +22,6 @@ class ArmorItem : public BaseItem
   ArmorItem(ArmorItem&&) noexcept = default;
   ArmorItem& operator=(ArmorItem&&) noexcept = default;
 
-  json toJson() const override;
-
   const std::map<item::DamageType, float>& getDamageResistance() const;
 
   bool isValid() const override;
@@ -32,6 +30,8 @@ class ArmorItem : public BaseItem
 
   protected:
   ArmorItem();
+
+  json toJsonPayload() const override;
 
   void setDamageResistance(item::DamageType type, float amount);
 

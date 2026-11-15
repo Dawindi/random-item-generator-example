@@ -1,6 +1,7 @@
 #include "armor_item_builder.h"
 #include "item_damage_type.h"
 #include "item_rarity.h"
+#include "item_serialization.h"
 #include "item_status.h"
 #include "item_type.h"
 #include "nlohmann/json_fwd.hpp"
@@ -77,65 +78,74 @@ auto ArmorItemBuilder::build() -> ArmorItem { return std::move(item_); }
 auto ArmorItemBuilder::fromJson(const nlohmann::json& data)
   -> std::optional<ArmorItem>
 {
-  // Validate required fields
-  if (!data.contains("name") || !data["name"].is_string())
+  const auto payload = item::verifyItem(data);
+  if (!payload.has_value())
   {
     return std::nullopt;
   }
-  if (!data.contains("description") || !data["description"].is_string())
+  const nlohmann::json& jsonData = *payload;
+
+  auto uuid = item::parseUuid(jsonData);
+  if (!uuid.has_value())
   {
     return std::nullopt;
   }
-  if (!data.contains("weight") || !data["weight"].is_number())
-  {
-    return std::nullopt;
-  }
-  if (!data.contains("rarity") || !data["rarity"].is_string())
-  {
-    return std::nullopt;
-  }
-  if (!data.contains("type") || !data["type"].is_string())
-  {
-    return std::nullopt;
-  }
-  if (!data.contains("status") || !data["status"].is_string())
-  {
-    return std::nullopt;
-  }
-  if (!data.contains("damage_resistance") ||
-      !data["damage_resistance"].is_object())
+  if (!item::hasValidCommonFields(jsonData))
   {
     return std::nullopt;
   }
 
-  auto rarity = item::rarityFromString(data["rarity"]);
+  if (!jsonData.contains("damage_resistance") ||
+      !jsonData["damage_resistance"].is_object())
+  {
+    return std::nullopt;
+  }
+
+  auto rarity = item::rarityFromString(jsonData["rarity"]);
   if (!rarity.has_value())
   {
     return std::nullopt;
   }
 
-  auto type = item::typeFromString(data["type"]);
+  auto type = item::typeFromString(jsonData["type"]);
   if (!type.has_value())
   {
     return std::nullopt;
   }
 
-  auto status = item::statusFromString(data["status"]);
+  auto status = item::statusFromString(jsonData["status"]);
   if (!status.has_value())
   {
     return std::nullopt;
   }
 
+  std::optional<UUID> owner;
+  if (jsonData.contains("owner"))
+  {
+    if (!jsonData["owner"].is_string())
+    {
+      return std::nullopt;
+    }
+    auto parsedOwner = UUID::fromString(jsonData["owner"].get<std::string>());
+    if (!parsedOwner.has_value())
+    {
+      return std::nullopt;
+    }
+    owner = std::move(*parsedOwner);
+  }
+
   ArmorItem item;
-  item.setName(data["name"]);
-  item.setDescription(data["description"]);
-  item.setWeight(static_cast<float>(data["weight"]));
+  item.setUUID(std::move(*uuid));
+  item.setName(jsonData["name"]);
+  item.setDescription(jsonData["description"]);
+  item.setWeight(static_cast<float>(jsonData["weight"]));
   item.setRarity(*rarity);
   item.setType(*type);
   item.setStatus(*status);
+  item.setOwner(std::move(owner));
 
   // Parse damage_resistance object
-  for (const auto& [key, value] : data["damage_resistance"].items())
+  for (const auto& [key, value] : jsonData["damage_resistance"].items())
   {
     if (!value.is_number())
     {

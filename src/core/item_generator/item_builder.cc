@@ -1,5 +1,6 @@
 #include "item_builder.h"
 #include "item_rarity.h"
+#include "item_serialization.h"
 #include "item_status.h"
 #include "item_type.h"
 #include "nlohmann/json_fwd.hpp"
@@ -69,57 +70,65 @@ auto ItemBuilder::build() -> BaseItem { return std::move(item_); }
 auto ItemBuilder::fromJson(const nlohmann::json& data)
   -> std::optional<BaseItem>
 {
-  // Validate required fields
-  if (!data.contains("name") || !data["name"].is_string())
+  const auto payload = item::verifyItem(data);
+  if (!payload.has_value())
   {
     return std::nullopt;
   }
-  if (!data.contains("description") || !data["description"].is_string())
+  const nlohmann::json& jsonData = *payload;
+
+  auto uuid = item::parseUuid(jsonData);
+  if (!uuid.has_value())
   {
     return std::nullopt;
   }
-  if (!data.contains("weight") || !data["weight"].is_number())
-  {
-    return std::nullopt;
-  }
-  if (!data.contains("rarity") || !data["rarity"].is_string())
-  {
-    return std::nullopt;
-  }
-  if (!data.contains("type") || !data["type"].is_string())
-  {
-    return std::nullopt;
-  }
-  if (!data.contains("status") || !data["status"].is_string())
+  if (!item::hasValidCommonFields(jsonData))
   {
     return std::nullopt;
   }
 
-  auto rarity = item::rarityFromString(data["rarity"]);
+  auto rarity = item::rarityFromString(jsonData["rarity"]);
   if (!rarity.has_value())
   {
     return std::nullopt;
   }
 
-  auto type = item::typeFromString(data["type"]);
+  auto type = item::typeFromString(jsonData["type"]);
   if (!type.has_value())
   {
     return std::nullopt;
   }
 
-  auto status = item::statusFromString(data["status"]);
+  auto status = item::statusFromString(jsonData["status"]);
   if (!status.has_value())
   {
     return std::nullopt;
   }
 
+  std::optional<UUID> owner;
+  if (jsonData.contains("owner"))
+  {
+    if (!jsonData["owner"].is_string())
+    {
+      return std::nullopt;
+    }
+    auto parsedOwner = UUID::fromString(jsonData["owner"].get<std::string>());
+    if (!parsedOwner.has_value())
+    {
+      return std::nullopt;
+    }
+    owner = std::move(*parsedOwner);
+  }
+
   BaseItem item;
-  item.setName(data["name"]);
-  item.setDescription(data["description"]);
-  item.setWeight(static_cast<float>(data["weight"]));
+  item.setUUID(std::move(*uuid));
+  item.setName(jsonData["name"]);
+  item.setDescription(jsonData["description"]);
+  item.setWeight(static_cast<float>(jsonData["weight"]));
   item.setRarity(*rarity);
   item.setType(*type);
   item.setStatus(*status);
+  item.setOwner(std::move(owner));
 
   return item;
 }

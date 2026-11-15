@@ -22,8 +22,6 @@ class WeaponItem : public BaseItem
   WeaponItem(WeaponItem&&) noexcept = default;
   WeaponItem& operator=(WeaponItem&&) noexcept = default;
 
-  json toJson() const override;
-
   const std::map<item::DamageType, int>& getDamage() const;
 
   float getRangeInMeters() const;
@@ -34,6 +32,8 @@ class WeaponItem : public BaseItem
 
   protected:
   WeaponItem();
+
+  json toJsonPayload() const override;
 
   void setDamage(item::DamageType type, int amount);
   void setRangeInMeters(float range);

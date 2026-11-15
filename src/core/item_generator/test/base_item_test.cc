@@ -11,6 +11,7 @@
 #include "item_data_types/item_rarity.h"
 #include "item_data_types/item_status.h"
 #include "item_data_types/item_type.h"
+#include "item_serialization.h"
 #include "nlohmann/json_fwd.hpp"
 #include "uuid.h"
 
@@ -300,7 +301,12 @@ TEST_F(BaseItemTest, ToJson)
 
   // Without owner
   {
-    const auto result = item.toJson();
+    const auto envelope = item.toJson();
+    EXPECT_TRUE(envelope.contains("payload"));
+    EXPECT_TRUE(envelope.contains("hash"));
+    EXPECT_TRUE(item::verifyItem(envelope).has_value());
+
+    const auto result = envelope["payload"];
     EXPECT_EQ(result["uuid"], item.getUUID().toString());
     EXPECT_EQ(result["name"], "Iron Sword");
     EXPECT_EQ(result["description"], "A sturdy iron sword.");
@@ -317,7 +323,10 @@ TEST_F(BaseItemTest, ToJson)
     const auto ownerStr = owner.toString();
     auto itemWithOwner = ItemBuilder::duplicateItem(item, std::move(owner));
 
-    const auto result = itemWithOwner.toJson();
+    const auto envelope = itemWithOwner.toJson();
+    EXPECT_TRUE(item::verifyItem(envelope).has_value());
+
+    const auto result = envelope["payload"];
     EXPECT_TRUE(result.contains("owner"));
     EXPECT_EQ(result["owner"], ownerStr);
   }
@@ -340,7 +349,8 @@ TEST_F(BaseItemTest, ToJson_MatchesExpectedFile_NoOwner)
   auto raw = readFile(dataPath("expected_item_no_owner.json"));
   replaceAll(raw, "00000000-0000-0000-0000-000000000000",
              potion.getUUID().toString());
-  const json expected = json::parse(raw);
+  const json expectedPayload = json::parse(raw);
+  const json expected = item::signItem(expectedPayload);
 
   EXPECT_EQ(potion.toJson(), expected);
 }
@@ -363,7 +373,8 @@ TEST_F(BaseItemTest, ToJson_MatchesExpectedFile_WithOwner)
   replaceAll(raw, "00000000-0000-0000-0000-000000000000",
              sword.getUUID().toString());
   replaceAll(raw, "11111111-1111-1111-1111-111111111111", ownerStr);
-  const json expected = json::parse(raw);
+  const json expectedPayload = json::parse(raw);
+  const json expected = item::signItem(expectedPayload);
 
   EXPECT_EQ(sword.toJson(), expected);
 }
